@@ -1,5 +1,21 @@
 # MeterWise verification
 
+## Version 2.0 — Singapore estate pilot
+
+Verified on 3 October 2026 UTC (4 October SGT). The application is an independent portfolio pilot: real public HDB building metadata, simulated meters and maintenance, no agency integration or government affiliation.
+
+- `npm run check`: frontend and NodeNext server checks pass.
+- `npm test`: all 19 tests pass. Estate coverage includes per-block/hour solar accounting, legitimate zero values, missing-data safeguards, CSV repairs, visitor isolation, area permissions, ordered workflow transitions and two competing updates with exactly one accepted mutation/audit event.
+- `npm run build`: passes. The existing chart dependency contributes to a JavaScript chunk-size warning; the office-building UI is loaded separately.
+- `npm audit --offline=false --json`: zero known dependency advisories. Saved report: `docs/security/npm-audit-v2.0.json`.
+- Vercel production release `cfe9fa9c6d8a61bb46998432f82545bd5a8f51dc` is ready. The release was merged through pull request #1 after preview checks.
+- Eleven production API checks pass. They exercise the real Vercel/Turso deployment: six blocks/24 assets/620 units, two gap repairs, interval solar identities, persistent history and reports, invalid inputs, four saved maintenance events, stale writes, workspace isolation and server-enforced area restrictions. The original building demo retains its eight missing intervals.
+- Cloud Chrome checks cover sample download/upload and preview, 100% coverage after repair, inspection assignment/completion/verification, a real report download, area-view restrictions, sources, the lighting slider, skip navigation and seven accessible daily chart rows. Production readings and preview import history also survived reloads. A browser-discovered dialog alignment issue was fixed and visually checked before release.
+
+Run `python scripts/verify-estate-live.py` to reproduce the live checks using two new synthetic workspaces. Recorded evidence is in `docs/qa/v2.0/`; no database credentials, browser cookies or real resident data are included.
+
+The current release was visually checked at the cloud browser's desktop viewport. Earlier phone/tablet evidence applies to the original building workspace. A live MySQL daemon, physical meters, agency identity/membership and audited emissions reporting were not tested. The public role switch is a permissions demonstration, not real authentication.
+
 Initial build: 2 October 2026. Vercel release verification: 3 October 2026.
 
 ## Automated results
