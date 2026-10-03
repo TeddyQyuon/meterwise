@@ -48,8 +48,8 @@ def passed(label, **evidence):
 
 manager = visitor()
 health = request(manager, "/health")
-assert health["ok"] and health["version"] == "2.0.0"
-passed("Vercel 2.0 health checks persistent Turso storage")
+assert health["ok"] and health["version"] == "2.1.0" and health["backend"] == "Python" and health["framework"] == "FastAPI"
+passed("Vercel Python/FastAPI 2.1 health checks persistent Turso storage")
 request(manager, "/session", "POST", {"role": "manager"}, status=403, origin="https://foreign.example")
 request(manager, "/session", "POST", {"role": "manager"})
 passed("Cross-origin session mutation is rejected")
@@ -133,7 +133,7 @@ office = request(manager, "/dashboard")
 assert office["metrics"]["missing"] == 8
 passed("Original building demo remains available with its unchanged eight-reading gap")
 
-output = Path("docs/qa/v2.0")
+output = Path("docs/qa/v2.1")
 output.mkdir(parents=True, exist_ok=True)
 (output / "estate-report.csv").write_text(report)
 (output / "live-api-checks.json").write_text(json.dumps({"url": base, "verified_at": datetime.now(timezone.utc).isoformat(), "checks": checks, "synthetic_test_workspaces": 2, "known_dependency_vulnerabilities": 0}, indent=2) + "\n")
