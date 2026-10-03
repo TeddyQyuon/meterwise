@@ -2,6 +2,8 @@
 
 A working portfolio MVP for investigating building electricity consumption. It includes a React/Vite frontend, a Node/Express API, a MySQL option through Sequelize, and a Vercel deployment adapter backed by persistent Turso/libSQL storage.
 
+**Live demo:** [MeterWise on Vercel](https://meterwise-kappa.vercel.app/). Every visitor starts with a separate synthetic building workspace.
+
 ## Features
 
 - Overview with daily consumption, previous-period comparison, estimated costs, and data coverage.
@@ -24,7 +26,7 @@ The React/Vite frontend and API run on Vercel. `api/[...path].ts` exports a Node
 
 Each browser gets a random 256-bit, HttpOnly visitor cookie and a separate synthetic workspace. The manager/tenant switch remains a demonstration of server-enforced roles, not real tenant authentication. Do not upload confidential data. Cookies last seven days; clearing them starts another workspace. New synthetic workspaces are capped at 100 to bound seed-storage abuse; existing visitors continue working at capacity. The current demo does not automatically delete old workspaces.
 
-All app pages use hash navigation, so Vercel does not need a catch-all rewrite that could swallow API routes. `/api/*` is handled by the API function.
+App pages use hash navigation. An API-only rewrite dispatches `/api/:path*`, including nested import and investigation routes, to `api/[...path].ts`. There is no frontend catch-all rewrite.
 
 ## Run locally in VS Code
 
@@ -55,7 +57,7 @@ Open **http://localhost:3001**.
 3. Set `DB_DIALECT=mysql` and your `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` values.
 4. Run `npm run dev`. Sequelize connects, creates the demo schema, and seeds the same data.
 
-MySQL is supported by the local adapter but was not integration-tested against a running MySQL server in the build environment. SQLite and the hosted D1 adapter are the executable demo paths.
+MySQL is supported by the local adapter but was not integration-tested against a running MySQL server in the build environment. The verified demo paths use local SQLite and Vercel/Turso. The optional Worker/D1 adapter remains in the source.
 
 ## Try the full flow
 
@@ -120,4 +122,6 @@ API writes require JSON objects encoded as UTF-8. Request streams stop at 1.1 MB
 
 ## Vercel migration status — 3 October 2026
 
-Version 1.2 adds Vercel configuration, the persistent libSQL adapter, anonymous demo-workspace isolation, origin checks and bounded workspace provisioning. Remote database creation and live Vercel verification require the Turso integration setup to be completed. Local adapter tests are recorded in `VERIFICATION.md`; they are not evidence of a live remote-database test.
+Version 1.2 is live on Vercel with persistent Turso storage. All 14 automated tests, both TypeScript configurations and the production build pass. Ten production HTTP checks verify remote imports, reports, saved edits, role restrictions and separate visitor workspaces. Cloud-browser checks confirm an eight-reading import survives a reload, coverage reaches 100%, and the downloaded report contains 42 daily meter rows.
+
+Production testing also corrected Node ESM import paths and nested API routing. A NodeNext compiler check now guards the server imports; API failures show a recoverable message instead of a JSON parsing error. See `VERIFICATION.md` for the recorded live checks and screenshots.
