@@ -1,4 +1,4 @@
-import type {ImportPreview, Meter, Reading} from './types';
+import type {ImportPreview, Meter, Reading} from './types.js';
 export function parseCsv(text: string): {line: number; cells: string[]}[] {
   const rows: {line: number; cells: string[]}[] = [];
   let cells: string[] = [], field = '', quoted = false, closed = false, line = 1, rowLine = 1;

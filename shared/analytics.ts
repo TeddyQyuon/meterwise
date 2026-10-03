@@ -1,4 +1,4 @@
-import type {Reading, Meter} from './types';
+import type {Reading, Meter} from './types.js';
 export const TIMEZONE = 'Asia/Singapore';
 export const DAY_MS = 86_400_000;
 export const round = (n: number, digits = 2) => Math.round((n + Number.EPSILON) * 10 ** digits) / 10 ** digits;
