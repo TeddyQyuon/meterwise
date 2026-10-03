@@ -1,6 +1,6 @@
 # MeterWise verification
 
-Build date: 2 October 2026.
+Initial build: 2 October 2026. Vercel release verification: 3 October 2026.
 
 ## Automated results
 
@@ -77,15 +77,46 @@ Evidence: [dashboard](docs/qa/v1.1/desktop.jpg), [CSV validation](docs/qa/v1.1/i
 
 - The initial dataset is synthetic; alerts use explicit thresholds and expected intervals.
 - The local Node demo uses SQLite by default. The Sequelize/MySQL adapter was supplied but a MySQL daemon was unavailable for integration testing.
-- Browser UI checks used the local Express/SQLite adapter. The hosted D1 adapter is covered by shared API/identity tests and deployment/build checks, not a browser round-trip to production.
-- The browser exposed no registered WebMCP tools, so the optional read-only energy-summary integration could not be exercised in this browser.
+- The earlier version 1.1 browser checks used the local Express/SQLite adapter. Version 1.2 was also checked against live Vercel/Turso, as recorded below. The optional D1 adapter has not had a production browser round-trip.
+- The earlier local preview exposed no registered WebMCP tools. The live Vercel page exposes a read-only energy-summary tool, which was exercised successfully in the version 1.2 checks.
 - Demo role switching demonstrates server-side view/write checks. Real tenant account provisioning is a separate next milestone.
 - Forecasting, hardware integration, automated notifications, and live tariffs are not implemented in this first version.
 
 ## Vercel migration checks — 3 October 2026
 
-Version 1.2: **14 tests pass**, TypeScript checks pass, production Vite build passes, and the full npm dependency audit reports **0 known vulnerabilities**.
+Version 1.2: **14 tests pass**, the frontend and NodeNext server TypeScript checks pass, the production Vite build passes, and the full npm dependency audit reports **0 known vulnerabilities**.
 
 New integration tests use the real libSQL client against a local SQLite file. They verify imported readings and history survive closing and reopening the client; separate browser workspaces cannot read each other's alerts; Secure/HttpOnly/SameSite cookies; tenant write restrictions; rejected missing/foreign/cross-site origins before database access; generic database-failure responses; atomic batch rollback; and a bound on new synthetic workspaces.
 
-Remote Turso and live Vercel browser checks are pending provider integration consent. The local libSQL test does not demonstrate a remote database connection.
+### Live Vercel and Turso checks
+
+The production app at **https://meterwise-kappa.vercel.app/** was tested against its connected Turso database on 3 October 2026. `/api/health` returned HTTP 200 after an actual database query, identifying version 1.2.0, Vercel hosting and Turso storage. The database uses the free Starter plan; credentials are server-only Vercel environment variables.
+
+All **10 production HTTP checks passed** using two fresh synthetic visitor workspaces:
+
+1. Live function and remote database health.
+2. Rejection of missing/foreign write origins and anonymous nested API requests.
+3. Secure, HttpOnly, SameSite visitor cookies and seeded workspace creation.
+4. Eight valid CSV rows previewed and committed; coverage reached 100%.
+5. Repeated imports did not duplicate import history.
+6. Remote CSV report contained 42 daily meter rows.
+7. Investigation note and status changes persisted.
+8. Meter threshold changes persisted.
+9. Tenant views contained only assigned meters; imports, meter edits and foreign-tenant filters were rejected.
+10. Another visitor retained its own baseline and empty history; an alert from another workspace was inaccessible.
+
+The cloud browser independently exercised the public app:
+
+| Scenario | Observed result |
+| --- | --- |
+| CSV import and reload | Eight readings imported; saved history survived reload. Coverage changed from 99.2% to 100% and the missing-data alert resolved. |
+| Report download | The actual downloaded CSV contained 42 rows, all with 100% coverage. |
+| Tenant preview | Northstar Studio saw two meters, its own figures and no import controls. Returning to manager restored the building view. |
+| Mixed CSV preview | One valid reading, two duplicates and one unknown-meter error were identified. This validation-only fixture was not committed. |
+| Read-only WebMCP summary | Returned 4,083.53 kWh, S$1,163.81, 1,008 expected/received intervals, zero missing intervals and two open alerts, matching the dashboard. |
+
+Production testing found and fixed two deployment defects: extensionless server imports failed under Node ESM, and nested API paths initially returned 404. Explicit `.js` import specifiers, the NodeNext compiler check and an API-only Vercel rewrite resolved them. The frontend now handles a non-JSON API failure with a clear retry message.
+
+The 390 px and 768 px responsive checks above apply to the earlier local version 1.1; they were not repeated against the remote release. A live MySQL server and real meter hardware remain untested.
+
+Evidence: [live HTTP checks](docs/qa/v1.2/live-api-checks.json), [Vercel dashboard](docs/qa/v1.2/desktop.jpg), [Vercel CSV validation](docs/qa/v1.2/imports.jpg), [downloaded building report](docs/qa/v1.2/building-report.csv).
