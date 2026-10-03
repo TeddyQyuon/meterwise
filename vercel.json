@@ -5,6 +5,9 @@
   "installCommand": "npm ci",
   "outputDirectory": "dist/client",
   "regions": ["sin1"],
+  "rewrites": [
+    {"source":"/api/:path*","destination":"/api/[...path]"}
+  ],
   "functions": {
     "api/*.ts": {
       "includeFiles": "drizzle/*.sql",
