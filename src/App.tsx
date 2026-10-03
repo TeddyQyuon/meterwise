@@ -13,7 +13,10 @@ const dateLabel=(value:string)=>new Intl.DateTimeFormat('en-SG',{day:'numeric',m
 const timeLabel=(value:string)=>new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:TIMEZONE}).format(new Date(value));
 async function api<T>(path:string,options:RequestInit={}):Promise<T>{
   const response=await fetch(`/api${path}`,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json',...options.headers}});
-  const data=await response.json() as T & {error?:string};if(!response.ok)throw new Error(data.error??'The request could not be completed.');return data;
+  let data:T & {error?:string};
+  try{data=await response.json() as T & {error?:string};}
+  catch{throw new Error('MeterWise is temporarily unavailable. Please try again shortly.');}
+  if(!response.ok)throw new Error(data.error??'The request could not be completed.');return data;
 }
 const post=(body:unknown)=>({method:'POST',body:JSON.stringify(body)});
 function Badge({children,tone='neutral'}:{children:ReactNode;tone?:string}){return <span className={`badge ${tone}`}>{children}</span>;}
