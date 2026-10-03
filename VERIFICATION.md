@@ -1,5 +1,18 @@
 # MeterWise verification
 
+## Python backend 2.1 — 4 October 2026 SGT
+
+The entire API now runs on Python 3.12 and FastAPI; React/Vite and its TypeScript frontend remain. Existing API URLs, Turso tables, workspace hashes, cookie names, sessions and historical seed markers are preserved. Express/Sequelize/MySQL and Worker/D1 runtime adapters were retired.
+
+Local verification: **45 pytest cases pass**, including a strict comparison against JSON captured from the actual TypeScript 2.0 API. Ruff, frontend TypeScript checking and the production Vite build pass. The Python adapter tests exercise typed Hrana parameters, conditional transaction rollback, idempotent migrations, large atomic seeds and timeout behavior against SQLite-backed HTTP protocol transport.
+
+The suite also covers visitor/area/tenant isolation; old Node-style cookies and persistent database restarts; completed CSV intervals, duplicate history and source reports; missing-versus-zero energy; exact origins before database access; UTF-8/media types and streamed byte limits; work-order evidence, optimistic versions and two conflicting saves producing one successful update and one conflict with exactly one new event.
+
+Live deployment and current dependency audit evidence are recorded below once verification completes. Historical verification follows and describes earlier backends only.
+
+---
+
+
 ## Version 2.0 — Singapore estate pilot
 
 Verified on 3 October 2026 UTC (4 October SGT). The application is an independent portfolio pilot: real public HDB building metadata, simulated meters and maintenance, no agency integration or government affiliation.

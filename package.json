@@ -1,6 +1,6 @@
 {
   "name": "meterwise",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,47 +9,27 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:client": "vite --host 0.0.0.0 --port 5173",
-    "dev:server": "node --watch --import tsx server/express.ts",
+    "dev:server": "python -m uvicorn backend.app:app --reload --host 127.0.0.1 --port 3001",
     "build": "vite build",
-    "start": "node --import tsx server/express.ts",
-    "check": "tsc --noEmit && tsc -p tsconfig.node.json",
-    "test": "node --import tsx --test tests/*.test.ts",
-    "db:generate": "drizzle-kit generate",
-    "build:worker": "vite build && node scripts/build-worker.mjs"
+    "start": "python -m uvicorn backend.app:app --host 127.0.0.1 --port 3001",
+    "check": "tsc --noEmit",
+    "test": "python -m pytest -q",
+    "check:backend": "ruff check backend api tests/python"
   },
   "dependencies": {
-    "@libsql/client": "^0.18.0",
-    "drizzle-orm": "0.45.2",
-    "express": "^5.1.0",
     "lucide-react": "^1.31.0",
-    "mysql2": "^3.14.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "recharts": "^3.8.0",
-    "sequelize": "^6.37.7"
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261002.1",
     "@tailwindcss/postcss": "4.2.1",
-    "@types/express": "^5.0.3",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
-    "drizzle-kit": "0.31.10",
-    "esbuild": "^0.28.2",
     "tailwindcss": "4.2.1",
-    "tsx": "^4.20.5",
     "typescript": "5.9.3",
-    "vite": "8.3.2",
-    "wrangler": "4.146.0"
-  },
-  "overrides": {
-    "@esbuild-kit/core-utils": {
-      "esbuild": "^0.28.2"
-    },
-    "sequelize": {
-      "uuid": "11.1.1"
-    }
+    "vite": "8.3.2"
   }
 }
