@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+data/
+.wrangler/
+.sites-runtime/
+*.log
+.vercel/
+.env.*
+!.env.example
