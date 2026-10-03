@@ -9,8 +9,10 @@ export async function createLocalDatabase():Promise<Database>{
   mkdirSync('data',{recursive:true});
   const sqlite=new DatabaseSync(process.env.SQLITE_PATH??'data/meterwise.sqlite');
   sqlite.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;');
-  const applied=sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='workspaces'").get();
-  if(!applied){for(const file of readdirSync('drizzle').filter(file=>file.endsWith('.sql')).sort())sqlite.exec(readFileSync(resolve('drizzle',file),'utf8'));sqlite.exec('PRAGMA optimize;');}
+  for(const file of readdirSync('drizzle').filter(file=>file.endsWith('.sql')).sort()){
+    sqlite.exec(readFileSync(resolve('drizzle',file),'utf8').replace(/CREATE (TABLE|(?:UNIQUE )?INDEX) /g,'CREATE $1 IF NOT EXISTS '));
+  }
+  sqlite.exec('PRAGMA optimize;');
   const run=(sql:string,params:unknown[]=[])=>{const result=sqlite.prepare(sql).run(...params as (string|number|null)[]);return {changes:Number(result.changes)};};
   return {
     async all<T>(sql:string,params:unknown[]=[]){return sqlite.prepare(sql).all(...params as (string|number|null)[]) as T[];},
@@ -30,7 +32,12 @@ async function createMysqlDatabase():Promise<Database>{
     readings:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,meter_id VARCHAR(64) NOT NULL,recorded_at VARCHAR(32) NOT NULL,consumption_kwh DOUBLE NOT NULL,UNIQUE KEY idx_readings_meter_timestamp(workspace_id,meter_id,recorded_at),INDEX idx_readings_workspace_time(workspace_id,recorded_at)',
     alerts:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,meter_id VARCHAR(64) NOT NULL,type VARCHAR(64) NOT NULL,title VARCHAR(191) NOT NULL,detail TEXT NOT NULL,severity VARCHAR(32) NOT NULL,status VARCHAR(32) NOT NULL,recorded_at VARCHAR(32) NOT NULL,INDEX idx_alerts_workspace_meter(workspace_id,meter_id)',
     notes:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,alert_id VARCHAR(191) NOT NULL,body TEXT NOT NULL,author VARCHAR(191) NOT NULL,created_at VARCHAR(32) NOT NULL,INDEX idx_notes_alert(alert_id)',
-    imports:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,file_name VARCHAR(191) NOT NULL,accepted INT NOT NULL,skipped INT NOT NULL,rejected INT NOT NULL,created_at VARCHAR(32) NOT NULL,INDEX idx_imports_workspace(workspace_id)'
+    imports:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,file_name VARCHAR(191) NOT NULL,accepted INT NOT NULL,skipped INT NOT NULL,rejected INT NOT NULL,created_at VARCHAR(32) NOT NULL,INDEX idx_imports_workspace(workspace_id)',
+    estate_state:'workspace_id VARCHAR(191) PRIMARY KEY,end_day VARCHAR(10) NOT NULL',
+    estate_readings:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,meter_id VARCHAR(64) NOT NULL,recorded_at VARCHAR(32) NOT NULL,consumption_kwh DOUBLE NOT NULL,UNIQUE KEY idx_estate_readings_interval(workspace_id,meter_id,recorded_at),INDEX idx_estate_readings_time(workspace_id,recorded_at)',
+    estate_orders:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,block_id VARCHAR(64) NOT NULL,meter_id VARCHAR(64) NOT NULL,title VARCHAR(191) NOT NULL,priority VARCHAR(32) NOT NULL,status VARCHAR(32) NOT NULL,assignee VARCHAR(191) NOT NULL,due_at VARCHAR(32) NOT NULL,created_at VARCHAR(32) NOT NULL,updated_at VARCHAR(32) NOT NULL,version INT NOT NULL,mutation_id VARCHAR(191) NOT NULL,INDEX idx_estate_orders_workspace(workspace_id)',
+    estate_events:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,order_id VARCHAR(191) NOT NULL,action VARCHAR(32) NOT NULL,body TEXT NOT NULL,actor VARCHAR(191) NOT NULL,created_at VARCHAR(32) NOT NULL,INDEX idx_estate_events_order(workspace_id,order_id)',
+    estate_imports:'id VARCHAR(191) PRIMARY KEY,workspace_id VARCHAR(191) NOT NULL,file_name VARCHAR(191) NOT NULL,accepted INT NOT NULL,skipped INT NOT NULL,rejected INT NOT NULL,created_at VARCHAR(32) NOT NULL,INDEX idx_estate_imports_workspace(workspace_id)'
   };
   for(const [table,columns] of Object.entries(schema))await sequelize.query(`CREATE TABLE IF NOT EXISTS ${table} (${columns}) ENGINE=InnoDB`);
   const mysqlSql=(sql:string)=>sql.replaceAll('INSERT OR IGNORE','INSERT IGNORE').replace(/\(key,/g,'(`key`,');
