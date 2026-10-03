@@ -1,0 +1,77 @@
+{
+  "verified_at": "2026-10-03T19:14:34.752250+00:00",
+  "url": "https://meterwise-kappa.vercel.app/#estate",
+  "deployment_commit": "cfe9fa9c6d8a61bb46998432f82545bd5a8f51dc",
+  "viewport": {
+    "width": 1363,
+    "height": 936
+  },
+  "checks": [
+    {
+      "check": "Production overview: six public HDB blocks, 620 units and explicit simulation labels",
+      "status": "passed"
+    },
+    {
+      "check": "Real sample download, file selection and two-valid-row preview",
+      "status": "passed"
+    },
+    {
+      "check": "Repair import saved, coverage 100% and values retained after production reload",
+      "status": "passed"
+    },
+    {
+      "check": "Simulated inspection created from pump exception, assigned, completed and verified with four audit events",
+      "status": "passed"
+    },
+    {
+      "check": "Native inspection dialog centered with a visible review heading",
+      "status": "passed"
+    },
+    {
+      "check": "Production block-summary CSV downloaded successfully",
+      "status": "passed"
+    },
+    {
+      "check": "Area viewer exposes two Ang Mo Kio blocks and manager view restores all towns",
+      "status": "passed"
+    },
+    {
+      "check": "Sources identify public metadata, simulated equipment, illustrative tariff and historical 2024 EMA factor",
+      "status": "passed"
+    },
+    {
+      "check": "Lighting slider changes from 15% to 16% without claiming actual savings",
+      "status": "passed"
+    },
+    {
+      "check": "Changing the reporting period disables export while the selection loads",
+      "status": "passed"
+    },
+    {
+      "check": "Skip link retains the estate application and chart table exposes seven daily rows",
+      "status": "passed"
+    }
+  ],
+  "evidence": [
+    "overview.jpg",
+    "work-orders.jpg",
+    "audit-timeline.jpg"
+  ],
+  "limits": [
+    "Desktop cloud viewport only for this release",
+    "No live agency integration, hardware, membership authentication, MySQL daemon or audited emissions"
+  ],
+  "portfolio": {
+    "url": "https://teddy-qyuon-portfolio.vercel.app/projects/meterwise-building-energy-analytics",
+    "commit": "aa48349bac1f836ddd830e542074dc8a73b2cbf6",
+    "deployment": "dpl_3E394YrvckzTAyKfTEEgnxgFx7eK",
+    "image_loads_verified": true,
+    "build": "passed",
+    "security_tests": {
+      "passed": 4,
+      "skipped_windows_only": 1,
+      "failed": 0
+    },
+    "evidence": "portfolio-case-study.jpg"
+  }
+}
