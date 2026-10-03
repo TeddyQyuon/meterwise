@@ -1,0 +1,55 @@
+{
+  "url": "https://meterwise-kappa.vercel.app",
+  "verified_at": "2026-10-03T19:04:53.504260+00:00",
+  "checks": [
+    {
+      "check": "Vercel 2.0 health checks persistent Turso storage",
+      "status": "passed"
+    },
+    {
+      "check": "Cross-origin session mutation is rejected",
+      "status": "passed"
+    },
+    {
+      "check": "Six public HDB blocks, 24 simulated assets and missing-data safeguards",
+      "status": "passed",
+      "cold_seed_seconds": 11.68
+    },
+    {
+      "check": "Two-reading import persists and unlocks correctly balanced estimates",
+      "status": "passed",
+      "coverage": 100
+    },
+    {
+      "check": "Repeated imports preserve one history record and identify duplicates",
+      "status": "passed"
+    },
+    {
+      "check": "Six-block CSV report carries source and historical factor provenance",
+      "status": "passed",
+      "rows": 6
+    },
+    {
+      "check": "Invalid dates, mismatched filters and path-like filenames are rejected",
+      "status": "passed"
+    },
+    {
+      "check": "Ordered maintenance transitions persist four audit events and reject stale writes",
+      "status": "passed"
+    },
+    {
+      "check": "Independent visitors cannot see another workspace's imports or maintenance",
+      "status": "passed"
+    },
+    {
+      "check": "Area viewer is restricted to two blocks, eight assets and read-only reports",
+      "status": "passed"
+    },
+    {
+      "check": "Original building demo remains available with its unchanged eight-reading gap",
+      "status": "passed"
+    }
+  ],
+  "synthetic_test_workspaces": 2,
+  "known_dependency_vulnerabilities": 0
+}
