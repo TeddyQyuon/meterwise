@@ -1,9 +1,9 @@
-import type {Database,Statement} from './database';
-import {ensureWorkspace,sha256} from './seed';
-import type {Role,Tenant,Meter,Reading,Session,Dashboard,EnergyAlert,AlertNote,ImportRecord} from '../shared/types';
-import {TIMEZONE,addDays,dayStart,dateRange,previousRange,dailyChart,expectedIntervals,sumReadings,round,singaporeDate,csvCell} from '../shared/analytics';
-import {validateCsv} from '../shared/csv';
-import {MAX_REQUEST_BYTES,secureResponse} from './security';
+import type {Database,Statement} from './database.js';
+import {ensureWorkspace,sha256} from './seed.js';
+import type {Role,Tenant,Meter,Reading,Session,Dashboard,EnergyAlert,AlertNote,ImportRecord} from '../shared/types.js';
+import {TIMEZONE,addDays,dayStart,dateRange,previousRange,dailyChart,expectedIntervals,sumReadings,round,singaporeDate,csvCell} from '../shared/analytics.js';
+import {validateCsv} from '../shared/csv.js';
+import {MAX_REQUEST_BYTES,secureResponse} from './security.js';
 
 class ApiError extends Error {constructor(public status:number,message:string){super(message);}}
 type Access={role:Role;tenant_id:string|null;workspace_id:string};

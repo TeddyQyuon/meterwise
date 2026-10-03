@@ -1,6 +1,6 @@
-import {handleApi} from './api';
-import {d1Database} from './database';
-import {secureResponse} from './security';
+import {handleApi} from './api.js';
+import {d1Database} from './database.js';
+import {secureResponse} from './security.js';
 interface Env{DB:D1Database;ASSETS:Fetcher}
 export default {
   async fetch(request:Request,env:Env):Promise<Response>{

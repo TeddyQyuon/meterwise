@@ -1,7 +1,7 @@
-import {handleApi} from './api';
-import {getTursoDatabase} from './libsql-database';
-import {secureResponse} from './security';
-import type {Database} from './database';
+import {handleApi} from './api.js';
+import {getTursoDatabase} from './libsql-database.js';
+import {secureResponse} from './security.js';
+import type {Database} from './database.js';
 
 const errorResponse=(request:Request,status:number,error:string)=>secureResponse(
   Response.json({error},{status,headers:{'Cache-Control':'no-store'}}),request.url);
