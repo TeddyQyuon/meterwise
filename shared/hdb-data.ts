@@ -1,0 +1,74 @@
+// Retrieved from the public HDB Property Information dataset; see data-source/hdb-property-snapshot.json.
+export const hdbCatalogue = {
+  "dataset_id": "d_17f5382f26140b1fdae0ba2ef6239d2f",
+  "publisher": "Housing & Development Board",
+  "title": "HDB Property Information",
+  "source_url": "https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view",
+  "api_url": "https://data.gov.sg/api/action/datastore_search",
+  "retrieved_at": "2026-10-03T18:06:47.151054+00:00",
+  "licence": "Singapore Open Data Licence",
+  "data_period_end": "2025-12",
+  "scope": "Six residential records selected for an independent demonstration. Asset installations and energy readings are simulated, not supplied by HDB.",
+  "blocks": [
+    {
+      "id": "B01",
+      "town": "Ang Mo Kio",
+      "block": "101",
+      "street": "ANG MO KIO AVE 3",
+      "units": 88,
+      "floors": 12,
+      "completed": 1977,
+      "source_record_id": 101
+    },
+    {
+      "id": "B02",
+      "town": "Ang Mo Kio",
+      "block": "102",
+      "street": "ANG MO KIO AVE 3",
+      "units": 88,
+      "floors": 12,
+      "completed": 1977,
+      "source_record_id": 144
+    },
+    {
+      "id": "B03",
+      "town": "Bishan",
+      "block": "101",
+      "street": "BISHAN ST 12",
+      "units": 92,
+      "floors": 25,
+      "completed": 1986,
+      "source_record_id": 105
+    },
+    {
+      "id": "B04",
+      "town": "Bishan",
+      "block": "102",
+      "street": "BISHAN ST 12",
+      "units": 92,
+      "floors": 25,
+      "completed": 1986,
+      "source_record_id": 147
+    },
+    {
+      "id": "B05",
+      "town": "Tampines",
+      "block": "101",
+      "street": "TAMPINES ST 11",
+      "units": 120,
+      "floors": 11,
+      "completed": 1981,
+      "source_record_id": 124
+    },
+    {
+      "id": "B06",
+      "town": "Tampines",
+      "block": "102",
+      "street": "TAMPINES ST 11",
+      "units": 140,
+      "floors": 11,
+      "completed": 1982,
+      "source_record_id": 168
+    }
+  ]
+} as const;
