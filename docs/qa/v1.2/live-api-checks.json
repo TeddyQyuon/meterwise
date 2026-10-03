@@ -1,0 +1,50 @@
+{
+  "url": "https://meterwise-kappa.vercel.app",
+  "verified_at": "2026-10-03T06:15:25.647281+00:00",
+  "checks": [
+    {
+      "check": "Live Vercel function queries Turso",
+      "status": "passed"
+    },
+    {
+      "check": "Missing and foreign origins rejected; nested API requires a workspace",
+      "status": "passed"
+    },
+    {
+      "check": "New visitor receives secure cookies and synthetic baseline",
+      "status": "passed"
+    },
+    {
+      "check": "Nested CSV preview and commit persist eight readings",
+      "status": "passed",
+      "coverage": 100
+    },
+    {
+      "check": "Repeated import does not duplicate history",
+      "status": "passed"
+    },
+    {
+      "check": "CSV reporting works on remote data",
+      "status": "passed",
+      "rows": 42
+    },
+    {
+      "check": "Alert notes and status updates persist",
+      "status": "passed"
+    },
+    {
+      "check": "Meter threshold edits persist",
+      "status": "passed"
+    },
+    {
+      "check": "Tenant filtering and server write boundaries hold",
+      "status": "passed"
+    },
+    {
+      "check": "Independent visitors have separate workspaces and alert access",
+      "status": "passed"
+    }
+  ],
+  "known_dependency_vulnerabilities": 0,
+  "synthetic_test_workspaces": 2
+}
