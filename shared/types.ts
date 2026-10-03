@@ -1,0 +1,12 @@
+export type Role = 'manager' | 'tenant';
+export type AlertStatus = 'open' | 'investigating' | 'resolved';
+export type Tenant = { id: string; name: string; floor: string; color: string };
+export type Meter = { id: string; name: string; tenant_id: string; location: string; threshold_kwh: number; interval_minutes: number };
+export type Reading = { meter_id: string; recorded_at: string; consumption_kwh: number };
+export type AlertNote = { id: string; alert_id: string; body: string; author: string; created_at: string };
+export type EnergyAlert = { id: string; meter_id: string; type: string; title: string; detail: string; severity: string; status: AlertStatus; recorded_at: string; notes?: AlertNote[] };
+export type Session = { role: Role; tenantId: string | null; workspace: { name: string; tariff: number; timezone: string }; tenants: Tenant[]; meters: Meter[]; bounds: { from: string; to: string } };
+export type ImportIssue = { line: number; meter: string; message: string; kind: 'invalid' | 'duplicate' };
+export type ImportPreview = { total: number; valid: number; duplicate: number; invalid: number; issues: ImportIssue[]; readings: Reading[]; range: { from: string; to: string } | null };
+export type ImportRecord = { id: string; file_name: string; accepted: number; skipped: number; rejected: number; created_at: string };
+export type Dashboard = { from: string; to: string; tariff: number; timezone: string; metrics: { kwh: number; cost: number; change: number | null; coverage: number; expected: number; actual: number; missing: number; openAlerts: number }; chart: { date: string; label: string; kwh: number; previous: number; cost: number }[]; tenants: (Tenant & { kwh: number; cost: number; meters: number; coverage: number })[]; meters: (Meter & { tenant_name: string; kwh: number; coverage: number; expected: number; actual: number; last_reading: string | null; active_alerts: number })[]; alerts: EnergyAlert[] };
