@@ -36,7 +36,7 @@ export function createVercelHandler(loadDatabase:()=>Promise<Database>=getTursoD
       const db=await loadDatabase();
       if(url.pathname==='/api/health'){
         await db.all('SELECT 1 AS ready');
-        return secureResponse(Response.json({ok:true,app:'MeterWise',version:'1.2.0',hosting:'Vercel',database:'Turso'},
+        return secureResponse(Response.json({ok:true,app:'MeterWise',version:'2.0.0',hosting:'Vercel',database:'Turso'},
           {headers:{'Cache-Control':'no-store'}}),request.url);
       }
       // The browser receives an unguessable workspace cookie. Incoming platform
