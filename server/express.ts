@@ -1,9 +1,9 @@
 import express from 'express';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
-import {handleApi} from './api';
-import {createLocalDatabase} from './local-database';
-import {MAX_REQUEST_BYTES,securityHeaders} from './security';
+import {handleApi} from './api.js';
+import {createLocalDatabase} from './local-database.js';
+import {MAX_REQUEST_BYTES,securityHeaders} from './security.js';
 try{process.loadEnvFile('.env');}catch{}
 const db=await createLocalDatabase();
 const app=express();

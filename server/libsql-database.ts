@@ -1,7 +1,7 @@
 import {createClient,type Client,type InValue} from '@libsql/client';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
-import type {Database} from './database';
+import type {Database} from './database.js';
 
 export function libsqlDatabase(client:Client):Database {
   return {

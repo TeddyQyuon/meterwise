@@ -1,6 +1,6 @@
-import type {Database,Statement} from './database';
-import type {Meter,Tenant,Reading,EnergyAlert} from '../shared/types';
-import {addDays,dayStart,singaporeDate,round} from '../shared/analytics';
+import type {Database,Statement} from './database.js';
+import type {Meter,Tenant,Reading,EnergyAlert} from '../shared/types.js';
+import {addDays,dayStart,singaporeDate,round} from '../shared/analytics.js';
 export const demoTenants:Tenant[]=[
   {id:'T01',name:'Northstar Studio',floor:'Level 2',color:'#267765'},
   {id:'T02',name:'Juniper Labs',floor:'Level 3',color:'#68a38a'},

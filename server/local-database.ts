@@ -2,7 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync,readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {Sequelize,QueryTypes} from 'sequelize';
-import type {Database,Statement} from './database';
+import type {Database,Statement} from './database.js';
 
 export async function createLocalDatabase():Promise<Database>{
   if(process.env.DB_DIALECT==='mysql')return createMysqlDatabase();
