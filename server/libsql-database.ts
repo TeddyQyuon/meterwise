@@ -1,5 +1,5 @@
 import {createClient,type Client,type InValue} from '@libsql/client';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {Database} from './database.js';
 
@@ -22,7 +22,7 @@ export function libsqlDatabase(client:Client):Database {
 }
 
 export async function initializeLibsql(client:Client):Promise<Database>{
-  const migration=readFileSync(resolve('drizzle/0000_loving_quentin_quire.sql'),'utf8');
+  const migration=readdirSync('drizzle').filter(name=>name.endsWith('.sql')).sort().map(name=>readFileSync(resolve('drizzle',name),'utf8')).join('--> statement-breakpoint');
   const statements=migration.split('--> statement-breakpoint').map(sql=>sql.trim())
     .filter(Boolean).map(sql=>sql.replace(/CREATE (TABLE|(?:UNIQUE )?INDEX) /g,'CREATE $1 IF NOT EXISTS '));
   await client.batch(statements,'write');

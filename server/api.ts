@@ -4,6 +4,7 @@ import type {Role,Tenant,Meter,Reading,Session,Dashboard,EnergyAlert,AlertNote,I
 import {TIMEZONE,addDays,dayStart,dateRange,previousRange,dailyChart,expectedIntervals,sumReadings,round,singaporeDate,csvCell} from '../shared/analytics.js';
 import {validateCsv} from '../shared/csv.js';
 import {MAX_REQUEST_BYTES,secureResponse} from './security.js';
+import {handleEstateApi} from './estate.js';
 
 class ApiError extends Error {constructor(public status:number,message:string){super(message);}}
 type Access={role:Role;tenant_id:string|null;workspace_id:string};
@@ -103,7 +104,7 @@ export async function handleApi(request:Request,db:Database,owner:string|null,op
 async function routeApi(request:Request,db:Database,owner:string|null,options:ApiOptions):Promise<Response>{
   try{
     const url=new URL(request.url),path=url.pathname,method=request.method;
-    if(path==='/api/health')return json({ok:true,app:'MeterWise',version:'1.2.0'});
+    if(path==='/api/health')return json({ok:true,app:'MeterWise',version:'2.0.0'});
     if(!owner)throw new ApiError(401,'Sign in to access your MeterWise workspace.');
     if(!['GET','HEAD','OPTIONS'].includes(method)){
       const origin=request.headers.get('Origin');
@@ -128,6 +129,7 @@ async function routeApi(request:Request,db:Database,owner:string|null,options:Ap
     if(!token)throw new ApiError(401,'Your demo session has expired. Reload to continue.');
     const sessions=await db.all<Access>('SELECT workspace_id,role,tenant_id FROM sessions WHERE token_hash=? AND workspace_id=? AND expires_at>?',[await sha256(token),workspaceId,Date.now()]);
     const access=sessions[0];if(!access)throw new ApiError(401,'Your demo session has expired. Reload to continue.');
+    if(path.startsWith('/api/estate/'))return await handleEstateApi(request,db,access,payload);
     if(path==='/api/session'&&method==='GET')return json(await sessionInfo(db,access));
     if(path==='/api/dashboard'&&method==='GET')return json(await dashboard(db,access,url));
     if(path==='/api/imports'&&method==='GET'){manager(access);return json(await db.all<ImportRecord>('SELECT id,file_name,accepted,skipped,rejected,created_at FROM imports WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',[workspaceId]));}
