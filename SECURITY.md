@@ -1,6 +1,14 @@
 # MeterWise security review
 
-Reviewed 2 October 2026 for version 1.1. Rechecked on 3 October: all 11 tests pass and npm audit still reports zero known vulnerabilities.
+Version 2.0 reviewed on 3 October 2026 UTC. Both TypeScript checks, all 19 automated tests and the production build pass. The registry audit reports zero known vulnerabilities; this does not establish that all application vulnerabilities have been eliminated.
+
+## Estate pilot controls
+
+- Operational readings, imports, maintenance orders and evidence are scoped by visitor workspace. Area viewers can read only two configured Ang Mo Kio blocks; all writes and the gap-repair download require the manager role.
+- Block/town/date filters are checked by the API. SQL uses bound parameters. Import duplicate queries inspect only candidate pairs, and imported intervals must fall within the workspace's fourteen-day demonstration window.
+- Work-order transitions require evidence and a matching version. The update and its audit event are atomic; an update-specific mutation ID prevents a competing update from inserting false evidence. Creation is capped at 100 orders per workspace.
+- Public HDB metadata is distinct from simulated electricity and maintenance data. No government credentials, resident details or real contractor dispatch are included. Audit records are append-only through the application, not independently tamper-proof.
+- New schema migrations add estate tables without replacing the existing building workspace. SQLite and libSQL adapters apply the sorted migrations idempotently. MySQL deployment remains unverified against a live daemon.
 
 ## Dependencies
 
@@ -19,9 +27,9 @@ The overrides keep the installed Drizzle and Sequelize major versions. Drizzle g
 
 ## Deployment boundaries
 
-The hosted Site remains owner-private and uses trusted platform identity. Local Express deliberately uses a shared demo identity and should not be exposed as a real tenant service. The role switch is a demo preview, not tenant authentication or membership provisioning. All included datasets and browser screenshots are synthetic.
+The optional hosted Site remains owner-private and uses trusted platform identity. Local Express deliberately uses a shared demo identity and should not be exposed as a real tenant service. The role switch is a demo preview, not tenant authentication or membership provisioning. Building metadata in the estate pilot comes from public HDB records; operational readings and maintenance are synthetic.
 
-Browser checks used the supervised Express/SQLite preview. The deployed Worker/D1 code is covered by shared API tests and the build/deployment workflow; it was not tested by navigating to production. A separate MySQL daemon was unavailable.
+Earlier browser checks used the supervised Express/SQLite preview. Vercel production checks are recorded in `VERIFICATION.md`. The optional Worker/D1 code is covered by shared API tests and its deployment workflow; a separate MySQL daemon was unavailable.
 
 ## Independent Vercel demo
 
