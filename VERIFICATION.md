@@ -8,7 +8,7 @@ Local verification: **45 pytest cases pass**, including a strict comparison agai
 
 The suite also covers visitor/area/tenant isolation; old Node-style cookies and persistent database restarts; completed CSV intervals, duplicate history and source reports; missing-versus-zero energy; exact origins before database access; UTF-8/media types and streamed byte limits; work-order evidence, optimistic versions and two conflicting saves producing one successful update and one conflict with exactly one new event.
 
-Live deployment and current dependency audit evidence are recorded below once verification completes. Historical verification follows and describes earlier backends only.
+Runtime dependency audits report **0 known advisories** across the 17 pinned Python packages and the npm dependency graph. Reports are saved under `docs/security/`; pytest evidence is `docs/qa/v2.1/pytest.xml`. Live deployment evidence will be recorded after preview and production verification. Historical verification follows and describes earlier backends only.
 
 ---
 
