@@ -22,7 +22,7 @@ The Python migration preserves visitor isolation, workspace identity and saved d
 
 ## HTTP and dependency controls
 
-API responses, CSV downloads and failures have no-store caching, no-sniff, referrer, permissions and CSP headers. HTTPS includes HSTS. Vercel documents permit same-origin scripts and React/Recharts inline styles. Source files, QA evidence, local data and the virtual environment are excluded from the Python function bundle where not required at runtime.
+API responses, CSV downloads and failures have no-store caching, no-sniff, referrer, permissions and CSP headers. HTTPS includes HSTS. Vercel documents permit same-origin scripts and React/Recharts inline styles. The Python service exposes only its API routes. The frontend service exposes the Vite output. Local data, the virtual environment and credentials are excluded from Git; source files and QA evidence have no public static route.
 
 Python runtime dependencies are pinned in `requirements.txt` and `uv.lock`; test/audit tools are separate in `requirements-dev.txt`. Express, Sequelize, MySQL, Wrangler, Drizzle tooling and TypeScript API runtime dependencies were removed. TypeScript is retained for the frontend only.
 
