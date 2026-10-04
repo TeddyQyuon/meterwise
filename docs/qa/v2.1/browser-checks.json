@@ -39,5 +39,13 @@
     }
   ],
   "application_console_errors": 0,
-  "manager_access_restored": true
+  "manager_access_restored": true,
+  "portfolio": {
+    "url": "https://teddy-qyuon-portfolio.vercel.app/projects/meterwise-building-energy-analytics",
+    "commit": "61eac5d5bf90a50ffa4733b46c3b69d918ceba7f",
+    "deployment": "dpl_HBiDGmunyB9TpriqXf5UsDS3WkeW",
+    "status": "passed",
+    "backend_stack_visible": "Python 3.12 / FastAPI",
+    "screenshot": "portfolio-python-live.jpg"
+  }
 }
