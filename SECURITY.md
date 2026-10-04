@@ -1,36 +1,31 @@
-# MeterWise security review
+# MeterWise security review — Python backend 2.1
 
-Version 2.0 reviewed on 3 October 2026 UTC. Both TypeScript checks, all 19 automated tests and the production build pass. The registry audit reports zero known vulnerabilities; this does not establish that all application vulnerabilities have been eliminated.
+The Python migration preserves visitor isolation, workspace identity and saved data. `VERIFICATION.md` records the checks actually run. Dependency advisories and application regression tests cover different risks; a clean advisory report is not a claim that every vulnerability is eliminated.
 
-## Estate pilot controls
+## Access and persistence
 
-- Operational readings, imports, maintenance orders and evidence are scoped by visitor workspace. Area viewers can read only two configured Ang Mo Kio blocks; all writes and the gap-repair download require the manager role.
-- Block/town/date filters are checked by the API. SQL uses bound parameters. Import duplicate queries inspect only candidate pairs, and imported intervals must fall within the workspace's fourteen-day demonstration window.
-- Work-order transitions require evidence and a matching version. The update and its audit event are atomic; an update-specific mutation ID prevents a competing update from inserting false evidence. Creation is capped at 100 orders per workspace.
-- Public HDB metadata is distinct from simulated electricity and maintenance data. No government credentials, resident details or real contractor dispatch are included. Audit records are append-only through the application, not independently tamper-proof.
-- New schema migrations add estate tables without replacing the existing building workspace. SQLite and libSQL adapters apply the sorted migrations idempotently. MySQL deployment remains unverified against a live daemon.
+- Random 256-bit visitor and session cookies are HttpOnly, Secure on HTTPS and SameSite=Lax, with seven-day expiry. Existing Node cookie/session hashes and epoch-millisecond expirations remain compatible. Platform identity headers are ignored.
+- All operational queries and writes use workspace-bound SQL parameters. Area viewers see only two Ang Mo Kio blocks; legacy tenants see assigned meters. Foreign orders/alerts return 404, and manager-only writes return 403.
+- Every unsafe request, including session creation, requires the exact origin (scheme, host and port). Cross-site requests are rejected before database work. An explicit local development allowlist is disabled when running on Vercel.
+- Workspace creation uses an atomic conditional SQL insert capped at 100; existing visitors retain access at capacity. Work orders are capped at 100 per workspace.
+- Existing SQL migrations are applied idempotently without replacing tables. Estate readings and the seed-window marker commit together. Historical windows are preserved across deployments.
+- Turso credentials remain in server environment variables. Production cannot fall back to local storage. SQL, provider response bodies and credential-bearing URLs are excluded from application error messages and logs.
 
-## Dependencies
+## Imports, analytics and maintenance
 
-`npm audit` reported 12 affected packages: 6 high and 6 moderate. After upgrading Vite to 8.3.2, Wrangler to 4.146.0 and compatible Workers types, plus narrow dependency overrides for the legacy Drizzle loader's esbuild and Sequelize's UUID, the audit reports zero known vulnerabilities. The before/after reports are in `docs/security/`. These are registry advisory results, not a claim that all application vulnerabilities have been eliminated.
+- UTF-8 JSON object bodies and media types are checked before mutation. Declared and actual streamed bodies are limited to 1,100,000 bytes; the application stops reading an oversized stream. Invalid JSON, nonfinite numbers and lone Unicode surrogates are rejected.
+- CSV files are limited to 1,000,000 bytes and 1,500 rows, with strict quoting, registered meter IDs, valid explicit ISO timezones, completed aligned intervals and finite nonnegative consumption. Estate imports stay inside their workspace’s fourteen-day window.
+- Duplicate checks query only validated candidate intervals, with at most 81 bind parameters. Plain filenames reject path separators and control characters. Imports are content-deduplicated and reports quote cells and neutralize text formulas.
+- Solar/grid matching runs per block and hour. Missing values are not imputed as zero; derived grid, cost, carbon and comparisons are withheld for incomplete data.
+- Maintenance transitions require evidence, a valid assignee and the current integer version. The order update and its event are one atomic transaction; a unique mutation ID prevents a failed competing save from appending an event. Audit records are append-only through the application, not independently tamper-proof.
+- SQLite and Turso batch writes roll back on failure. The Turso HTTP adapter uses documented conditional Hrana transactions in one round trip and never retries mutations after a timeout.
 
-The overrides keep the installed Drizzle and Sequelize major versions. Drizzle generation, Sequelize UUID defaults, TypeScript, all 11 automated tests and the production build were checked after installation.
+## HTTP and dependency controls
 
-## Application changes
+API responses, CSV downloads and failures have no-store caching, no-sniff, referrer, permissions and CSP headers. HTTPS includes HSTS. Vercel documents permit same-origin scripts and React/Recharts inline styles. The Python service exposes only its API routes. The frontend service exposes the Vite output. Local data, the virtual environment and credentials are excluded from Git; source files and QA evidence have no public static route.
 
-- JSON object bodies, media types and UTF-8 encoding are validated before database mutations. Declared and actual streamed sizes are bounded to 1,100,000 bytes; oversized streams are cancelled. CSV contents remain limited to 1,000,000 bytes and 1,500 rows.
-- Invalid CSV files do not read the complete meter history. Duplicate checks fetch only validated meter/timestamp pairs in workspace-scoped queries below D1's bind limit.
-- Foreign Origins and cross-site unsafe requests without Origin are rejected; the local development adapter has an explicit frontend-origin allowlist.
-- Import filenames must be plain, nonempty names without control characters or path separators. API validation errors are explicit; unexpected database messages stay out of client responses.
-- Both HTTP adapters apply no-sniff, referrer and permissions policies. Hosted HTML uses a Content Security Policy allowing local scripts and the existing ChatGPT embed origins; HTTPS responses include HSTS. Inline style is permitted for React/Recharts style attributes. Development Vite documents intentionally do not use the production document policy.
-- Existing parameterized SQL, workspace/tenant scope checks, manager-only writes, HttpOnly/SameSite cookies, CSV formula protection and import idempotency remain covered by regression tests.
+Python runtime dependencies are pinned in `requirements.txt` and `uv.lock`; test/audit tools are separate in `requirements-dev.txt`. Express, Sequelize, MySQL, Wrangler, Drizzle tooling and TypeScript API runtime dependencies were removed. TypeScript is retained for the frontend only.
 
-## Deployment boundaries
+## Demo boundaries
 
-The optional hosted Site remains owner-private and uses trusted platform identity. Local Express deliberately uses a shared demo identity and should not be exposed as a real tenant service. The role switch is a demo preview, not tenant authentication or membership provisioning. Building metadata in the estate pilot comes from public HDB records; operational readings and maintenance are synthetic.
-
-Earlier browser checks used the supervised Express/SQLite preview. Vercel production checks are recorded in `VERIFICATION.md`. The optional Worker/D1 code is covered by shared API tests and its deployment workflow; a separate MySQL daemon was unavailable.
-
-## Independent Vercel demo
-
-Vercel uses server-only Turso credentials. No database token is sent to the frontend. Each visitor receives a random 256-bit HttpOnly/Secure workspace cookie plus the existing session cookie. Incoming platform identity headers are ignored. Writes require the exact same origin, including session creation. Tenant views remain server-restricted. Synthetic workspace creation is capped at 100 using an atomic SQL conditional insert. The role switch is a public demo feature, not real account authentication.
+This remains an independent portfolio pilot with public HDB building metadata and simulated operational data. No government affiliation, agency credentials, real resident records, meter hardware or actual contractor dispatch are claimed. Public demo role switching is not production authentication. Live tariffs and verified emissions accounting are outside scope. Vercel preview protection remains enabled; existing free storage is reused.

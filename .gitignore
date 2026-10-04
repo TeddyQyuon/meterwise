@@ -8,3 +8,9 @@ data/
 .vercel/
 .env.*
 !.env.example
+
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc

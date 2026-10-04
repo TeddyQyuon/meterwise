@@ -1,157 +1,94 @@
 # MeterWise — Singapore Estate Energy Operations
 
-An independent public-housing operations pilot built around real HDB public building metadata and simulated hourly electricity readings. It is not affiliated with HDB, a Town Council or the Singapore Government, and has no access to their operational systems.
+An independent public-housing operations pilot using real HDB public building metadata and simulated energy and maintenance records. It is not affiliated with HDB, a Town Council or the Singapore Government.
 
-**Live demo:** [MeterWise on Vercel](https://meterwise-kappa.vercel.app/). Each visitor gets a separate persistent demonstration workspace.
+**Live demo:** https://meterwise-kappa.vercel.app/
 
-## Singapore estate pilot
+## Stack
 
-- Six real HDB blocks in Ang Mo Kio, Bishan and Tampines, representing 620 dwelling units. The source snapshot preserves dataset, record, licence and retrieval details.
-- Twenty-four simulated common-service meters covering lighting, lifts, water pumps and rooftop solar. Equipment installations are fictional; the public dataset does not identify them.
-- Solar/load matching for each block and hour. Self-consumption, grid import and exported surplus are counted separately; missing intervals withhold derived grid, cost and carbon estimates.
-- Town, block and date filters, per-dwelling-unit benchmarks, service breakdowns and an accessible chart data table.
-- CSV preview, a two-reading gap-repair sample, duplicate protection and persistent import history.
-- Maintenance triage with assignments, evidence notes and an open → in progress → completed → verified workflow. Version checks reject competing updates and prevent false audit events.
-- An area-viewer preview restricted by the server to two Ang Mo Kio blocks. It cannot import data or mutate maintenance records.
-- Traceable six-block CSV reports, a lighting-load scenario and a sources/methods page.
+- React, Vite, Tailwind CSS, Recharts and TypeScript for the frontend.
+- **Python 3.12 and FastAPI** for the entire REST backend: sessions, analytics, CSV validation/imports, reports, meter mapping and maintenance audit trails.
+- Python SQLite for local development; persistent Turso/libSQL over HTTPS for Vercel.
+- Vercel serves the built frontend and the Python ASGI function in Singapore. Node.js is used only by the frontend build tooling.
 
-The root opens the estate pilot. `#overview` opens the original office-building MVP; its data and workflows remain available. The estate pilot seeds fourteen completed historical SGT days and caps work orders at 100 per visitor workspace.
+Version 2.1 replaces the TypeScript backend and removes Express, Sequelize, MySQL and the optional Worker/D1 runtime. Existing Turso table names, visitor/session cookies, workspace hashes, historical seed windows, API paths and saved records are preserved. No database reset is required. The SQL migrations in `drizzle/` are retained as historical schema files; Python applies them idempotently.
 
-### Public sources and calculation boundaries
+## Estate workflows
+
+- Six real HDB blocks in Ang Mo Kio, Bishan and Tampines, representing 620 public-record dwelling units.
+- Twenty-four simulated meters covering common-area lighting, lifts, pumps and rooftop solar over fourteen completed SGT days.
+- Solar/load matching separately for every block and hour. Grid imports, self-consumption and surplus exports are counted separately. Missing readings withhold derived energy, cost and carbon figures; valid zeros count as readings.
+- Town/block/date filters, service breakdowns, public-dwelling-unit benchmarks and an accessible chart data table.
+- CSV preview, a two-reading gap-repair sample, content deduplication and persistent import history.
+- Evidence-based open → in progress → completed → verified work orders. Optimistic version checks and an atomic update/event transaction reject conflicting saves without false audit events. Completed orders can return for rework and verified orders can reopen.
+- Area viewers are restricted by the backend to two Ang Mo Kio blocks, eight assets and read-only reports. Only managers import readings or edit orders.
+- Traceable six-block CSV reports, an illustrative lighting scenario and sources/methods.
+
+The root opens the estate pilot. `#overview` opens the original building demo with six meters, four fictional tenants, thirty historical days, alert investigation notes, tenant/meter mapping, eight-reading CSV repair and daily meter reports. Its dataset and import history remain separate from the estate pilot.
+
+## Public sources and boundaries
 
 | Source | Use |
 | --- | --- |
-| [HDB Property Information](https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view) | Six selected public records: block, street, town, completion year, floors and dwelling units. Retrieved 4 October 2026 SGT; source data period ends December 2025. |
-| [HDB Green Towns Programme](https://www.hdb.gov.sg/about-us/our-role/create-smart-and-sustainable-homes/green-towns-programme) | Context for common-service energy efficiency and electrical sub-metering. |
-| [HDB SolarNova and smart electrical sub-meters](https://www.hdb.gov.sg/hdb-pulse/news/2021/hdb-launches-sixth-solarnova-tender-with-smart-electrical-sub-meters-to-optimise-energy-use) | Context for daytime common-service solar consumption and exported surplus. |
-| [EMA Singapore Energy Statistics](https://www.ema.gov.sg/resources/singapore-energy-statistics/chapter2) | Historical 2024 grid emission factor: 0.402 kg CO₂/kWh. It is not presented as a current-year factor. |
+| [HDB Property Information](https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view) | Six selected block records, streets, towns, completion years, floors and dwelling units. Retrieved 4 October 2026 SGT; source period ends December 2025. |
+| [HDB Green Towns Programme](https://www.hdb.gov.sg/about-us/our-role/create-smart-and-sustainable-homes/green-towns-programme) | Context for common-service efficiency and sub-metering. |
+| [HDB SolarNova](https://www.hdb.gov.sg/hdb-pulse/news/2021/hdb-launches-sixth-solarnova-tender-with-smart-electrical-sub-meters-to-optimise-energy-use) | Context for daytime common-service solar use and exported surplus. |
+| [EMA Singapore Energy Statistics](https://www.ema.gov.sg/resources/singapore-energy-statistics/chapter2) | Historical **2024** grid emission factor of **0.402 kg CO₂/kWh**. |
 
-All meter readings, asset installations, maintenance records and response targets are simulated. S$0.285/kWh is an illustrative flat tariff, not an official tariff or bill; estimates omit GST, contractual pricing and export revenue. Carbon figures are illustrative grid-import estimates, not verified emissions accounting. The lighting scenario estimates load reduction only. This is a reviewable portfolio pilot, not a production government service.
+Asset installations, meter readings, maintenance records and 24/72-hour response targets are simulated. S$0.285/kWh is an illustrative flat tariff excluding GST, contract pricing and export revenue. Carbon estimates are illustrative, not verified emissions accounting. The lighting scenario estimates load reduction only. No real hardware, resident details, contractor dispatch, agency authentication or live tariffs are connected.
 
-## Original building MVP
+## Run in VS Code
 
-A working portfolio MVP for investigating building electricity consumption. It includes a React/Vite frontend, a Node/Express API, a MySQL option through Sequelize, and a Vercel deployment adapter backed by persistent Turso/libSQL storage.
-
-**Live demo:** [MeterWise on Vercel](https://meterwise-kappa.vercel.app/). Every visitor starts with a separate synthetic building workspace.
-
-## Features
-
-- Overview with daily consumption, previous-period comparison, estimated costs, and data coverage.
-- Six electricity meters mapped to four fictional tenants/shared areas.
-- CSV validation for registered meters, explicit timezones, completed hourly intervals, non-negative consumption, malformed rows, and duplicates.
-- Preview before import, content-based import deduplication, and saved import history.
-- Configured-threshold consumption alerts, a seeded missing-data alert, and investigation notes/status updates.
-- Tenant views enforced by the API. Tenants cannot import readings, alter mappings, or update investigations.
-- Downloadable daily meter CSV reports with SGT dates and formula-safe text cells.
-- Responsive navigation, keyboard-operable dialogs, screen-reader labels, and an optional chart data table.
-
-## Vercel hosting
-
-The React/Vite frontend and API run on Vercel. `api/[...path].ts` exports a Node.js Web Request/Response handler around the shared application API. Database reads and writes go to Turso using the server-only `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` environment variables. Local SQLite files are never used as production storage.
-
-1. Import this repository into a Vercel project. The checked-in `vercel.json` sets the Vite build, `dist/client` output, Singapore function region, API migration files and security headers.
-2. Create a Turso database on a free plan and connect it to the project, or configure the two server environment variables from an existing database. Creating a new integration requires its provider terms to be accepted.
-3. Deploy. The adapter creates the schema idempotently on the first database connection. `/api/health` checks an actual database query before returning `ok: true`.
-4. Open the app and exercise the sample CSV import, reports, alert investigation and tenant preview.
-
-Each browser gets a random 256-bit, HttpOnly visitor cookie and a separate synthetic workspace. The manager/tenant switch remains a demonstration of server-enforced roles, not real tenant authentication. Do not upload confidential data. Cookies last seven days; clearing them starts another workspace. New synthetic workspaces are capped at 100 to bound seed-storage abuse; existing visitors continue working at capacity. The current demo does not automatically delete old workspaces.
-
-App pages use hash navigation. An API-only rewrite dispatches `/api/:path*`, including nested import and investigation routes, to `api/[...path].ts`. There is no frontend catch-all rewrite.
-
-## Run locally in VS Code
-
-Requires Node.js **22.13 or later** (Node 24 is recommended).
+Install Node.js 24 and Python 3.12. Create and activate a virtual environment:
 
 ```bash
-npm install
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS / Linux:
+source .venv/bin/activate
+```
+
+Then:
+
+```bash
+python -m pip install -r requirements-dev.txt
+npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. Express runs on port 3001. SQLite is the default, so the demo works without a database account. The schema is created from the checked-in migrations and synthetic readings are seeded on first use. Local data persists in `data/meterwise.sqlite`.
+Open http://localhost:5173. FastAPI runs on port 3001; Vite proxies `/api` to it. SQLite persists locally at `data/meterwise.sqlite`. The Node launcher finds `.venv` on Windows, macOS and Linux; `PYTHON_BIN` can select another Python executable.
 
-The local API trusts only its own origin and the explicit development origins in `CLIENT_ORIGINS` (see `.env.example`). If you run the frontend on a different host or port, add its exact origin there. The hosted Worker accepts same-origin writes only.
+Copy `.env.example` to `.env` for optional local settings. `npm run dev` loads it. Only the exact development origins in `CLIENT_ORIGINS` can write through the proxy. Production always requires the exact request origin.
 
-To serve the compiled frontend through Express:
+To serve the built frontend through Python:
 
 ```bash
 npm run build
 npm start
 ```
 
-Open **http://localhost:3001**.
+Open http://localhost:3001. To run the backend directly, use `python -m uvicorn backend.app:app --host 127.0.0.1 --port 3001` from the activated environment.
 
-## Use MySQL
+## Vercel
 
-1. Create an empty MySQL database named `meterwise` and grant a local application user access to it.
-2. Copy `.env.example` to `.env`.
-3. Set `DB_DIALECT=mysql` and your `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` values.
-4. Run `npm run dev`. Sequelize connects, creates the demo schema, and seeds the same data.
+`vercel.json` defines separate Vite and FastAPI services on the existing domain. `/api/(.*)` routes to the Python `backend.app:app` entrypoint; other paths route to the built frontend. Services preserve the original request paths. The checked-in Python version and dependency pins are used by the Python runtime.
 
-MySQL is supported by the local adapter but was not integration-tested against a running MySQL server in the build environment. The verified demo paths use local SQLite and Vercel/Turso. The optional Worker/D1 adapter remains in the source.
+Keep the existing **server-only** `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` project environment variables. Never prefix secrets with `VITE_`. Vercel requires Turso; it cannot fall back to an ephemeral SQLite file. The health endpoint queries the database and identifies `backend: Python`, `framework: FastAPI`, version 2.1.0 and Turso storage. Protected previews remain protected.
 
-## Try the full flow
+Each visitor gets a random 256-bit HttpOnly/Secure/SameSite workspace cookie plus an expiring session cookie. The public manager/tenant switch demonstrates server-enforced roles; it is not real account provisioning. Workspaces are isolated and persistent. New workspaces are atomically capped at 100 and orders at 100 per workspace. Clearing cookies starts a new workspace; the demo does not automatically delete old workspaces. Use synthetic data only.
 
-1. Open **Overview**. There are three active alerts and eight missing hourly intervals.
-2. Open **Import readings** and download the sample CSV.
-3. Choose that file. The preview shows eight valid readings.
-4. Import it. Coverage reaches 100% for the complete demo period; the missing-data alert is resolved with an automatic note.
-5. Open **Alerts**, investigate an unusual-consumption alert, add a note, and mark it resolved.
-6. Open **Meters & tenants** and edit a meter's tenant or threshold.
-7. Select **Preview tenant view**. Only Northstar Studio's assigned meters and alerts are accessible.
-8. Open **Reports** and download the selected reporting period.
-
-## Reading format
-
-```csv
-meter_id,timestamp,consumption_kwh
-MW-006,2026-10-01T09:00:00+08:00,4.20
-```
-
-`consumption_kwh` is energy used **during a single interval**, not a cumulative meter counter. `timestamp` marks the start of a completed 60-minute interval. The API normalizes timestamps to UTC; analytics and reports group them in `Asia/Singapore`. Missing data is shown as a gap and is not imputed. Zero is a valid consumption value. Imports are limited to 1 MB and 1,500 rows per file.
-
-Estimated costs use the configured demo tariff of S$0.285/kWh. This is a fictional configuration, not a quoted current utility tariff. Taxes and other fees are excluded. Reporting periods are anchored to the newest stored reading. The chart compares the preceding period of the same length, when earlier readings exist. Alerts are listed across all dates for the selected meters.
-
-## Architecture
-
-| Location | Purpose |
-|---|---|
-| `src/` | React/Vite dashboard and Tailwind/custom CSS |
-| `shared/` | Types, Singapore-time calculations, and CSV validation |
-| `server/api.ts` | Shared API, scope checks, import processing, reporting, and alert workflow |
-| `server/express.ts` | Node/Express HTTP adapter for local development and independent deployment |
-| `server/local-database.ts` | Persistent SQLite demo and Sequelize/MySQL adapters |
-| `server/worker.ts` | Optional Worker adapter using D1 and trusted platform user identity |
-| `api/[...path].ts`, `server/vercel.ts` | Vercel API with separate browser demo workspaces |
-| `server/libsql-database.ts` | Persistent Turso adapter with transactional writes |
-| `db/schema.ts`, `drizzle/` | Hosted database schema and schema-only migrations |
-| `tests/` | Calculation, import, report, role-boundary, and workflow checks |
-
-The optional Worker deployment uses platform sign-in and persistent D1 storage. It has a separate synthetic workspace for each trusted signed-in platform identity. The local Express version deliberately has a shared **demo** identity. The manager/tenant switch previews server-enforced permissions; it is not public tenant onboarding or password authentication. Before offering this to real tenants, provision real memberships and roles, remove the demo switch, and add operational authentication and access controls to the independent Express deployment.
-
-## Checks
+## Verification
 
 ```bash
+python -m pytest -q
+ruff check backend api tests/python
 npm run check
-npm test
 npm run build
+pip-audit -r requirements.txt
+npm audit
 ```
 
-See `VERIFICATION.md` for results and current limitations.
+The Python suite checks the old TypeScript API response contract, energy balances, missing-versus-zero data, persistent restarts and old cookie identity, CSV bounds, role and workspace isolation, origin checks, streamed body limits, stale/racing updates and transaction rollback. The real Turso HTTP adapter is exercised through a protocol transport backed by SQLite; live Vercel/Turso checks are recorded separately.
 
-For responsive browser checks, open `/tests/browser/responsive.html` on the development server. The local-only harness embeds the app at phone, tablet, or desktop widths; it is excluded from the production Vite build. Screenshots and the CSV files downloaded during browser QA are in `docs/qa/`.
-
-## Next development milestone
-
-Connect a real meter-data source, provision manager and tenant memberships, then add a Python forecasting service. Evaluate forecasts on a chronological holdout against a seasonal baseline. This version includes no AI forecasts and does not report fabricated model performance.
-
-## Version 1.1 improvements
-
-The facilities workspace now has a dark navigation rail, a prominent consumption card, clearer status colors and explicit S$ labels. The mobile drawer supports keyboard focus containment and Escape. CSV selection is keyboard accessible, invalid selections clear stale previews, and exports stay unavailable while selected results are loading or invalid.
-
-API writes require JSON objects encoded as UTF-8. Request streams stop at 1.1 MB, CSV duplicate checks query only candidate intervals, and cross-site writes are rejected. Hosted documents, errors and downloads receive security headers, including a document Content Security Policy. See `SECURITY.md` and `VERIFICATION.md` for tested scope and limitations.
-
-## Vercel migration status — 3 October 2026
-
-Version 1.2 is live on Vercel with persistent Turso storage. All 14 automated tests, both TypeScript configurations and the production build pass. Ten production HTTP checks verify remote imports, reports, saved edits, role restrictions and separate visitor workspaces. Cloud-browser checks confirm an eight-reading import survives a reload, coverage reaches 100%, and the downloaded report contains 42 daily meter rows.
-
-Production testing also corrected Node ESM import paths and nested API routing. A NodeNext compiler check now guards the server imports; API failures show a recoverable message instead of a JSON parsing error. See `VERIFICATION.md` for the recorded live checks and screenshots.
+`python scripts/verify-estate-live.py` verifies two fresh synthetic workspaces on the published app. Evidence and limits are in `VERIFICATION.md` and `SECURITY.md`; historical v1/v2 evidence remains available.

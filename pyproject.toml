@@ -1,0 +1,17 @@
+[project]
+name = "meterwise-api"
+version = "2.1.0"
+description = "Independent Singapore estate energy operations pilot"
+requires-python = ">=3.12,<3.13"
+dependencies = ["fastapi==0.142.2", "httpx==0.28.1", "uvicorn==0.54.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

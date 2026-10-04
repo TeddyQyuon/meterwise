@@ -1,0 +1,985 @@
+{
+  "source": "MeterWise 2.0.0 TypeScript production handler with fixed synthetic clock",
+  "clock": "2026-10-03T19:00:00.000Z",
+  "session": {
+    "role": "manager",
+    "tenantId": null,
+    "workspace": {
+      "name": "Harbour One",
+      "tariff": 0.285,
+      "timezone": "Asia/Singapore"
+    },
+    "tenants": [
+      {
+        "id": "T01",
+        "name": "Northstar Studio",
+        "floor": "Level 2",
+        "color": "#267765"
+      },
+      {
+        "id": "T02",
+        "name": "Juniper Labs",
+        "floor": "Level 3",
+        "color": "#68a38a"
+      },
+      {
+        "id": "T03",
+        "name": "Atlas Digital",
+        "floor": "Level 4",
+        "color": "#a3bcb0"
+      },
+      {
+        "id": "T04",
+        "name": "Shared areas",
+        "floor": "Building-wide",
+        "color": "#c5dac9"
+      }
+    ],
+    "meters": [
+      {
+        "id": "MW-001",
+        "name": "Studio main",
+        "tenant_id": "T01",
+        "location": "Level 2 · East wing",
+        "threshold_kwh": 18,
+        "interval_minutes": 60
+      },
+      {
+        "id": "MW-002",
+        "name": "Studio air conditioning",
+        "tenant_id": "T01",
+        "location": "Level 2 · Plant room",
+        "threshold_kwh": 20,
+        "interval_minutes": 60
+      },
+      {
+        "id": "MW-003",
+        "name": "Labs main",
+        "tenant_id": "T02",
+        "location": "Level 3 · West wing",
+        "threshold_kwh": 22,
+        "interval_minutes": 60
+      },
+      {
+        "id": "MW-004",
+        "name": "Digital main",
+        "tenant_id": "T03",
+        "location": "Level 4 · East wing",
+        "threshold_kwh": 18,
+        "interval_minutes": 60
+      },
+      {
+        "id": "MW-005",
+        "name": "Common lighting",
+        "tenant_id": "T04",
+        "location": "Lobby & corridors",
+        "threshold_kwh": 12,
+        "interval_minutes": 60
+      },
+      {
+        "id": "MW-006",
+        "name": "Building services",
+        "tenant_id": "T04",
+        "location": "Basement · Services",
+        "threshold_kwh": 16,
+        "interval_minutes": 60
+      }
+    ],
+    "bounds": {
+      "from": "2026-09-04",
+      "to": "2026-10-03"
+    }
+  },
+  "building": {
+    "from": "2026-09-27",
+    "to": "2026-10-03",
+    "tariff": 0.285,
+    "timezone": "Asia/Singapore",
+    "metrics": {
+      "kwh": 4062.28,
+      "cost": 1157.75,
+      "change": -1.2,
+      "coverage": 99.2,
+      "expected": 1008,
+      "actual": 1000,
+      "missing": 8,
+      "openAlerts": 3
+    },
+    "chart": [
+      {
+        "date": "2026-09-27",
+        "label": "27 Sept",
+        "kwh": 414.69,
+        "previous": 421.55,
+        "cost": 118.19
+      },
+      {
+        "date": "2026-09-28",
+        "label": "28 Sept",
+        "kwh": 646.7,
+        "previous": 658.8,
+        "cost": 184.31
+      },
+      {
+        "date": "2026-09-29",
+        "label": "29 Sept",
+        "kwh": 643.73,
+        "previous": 655.3,
+        "cost": 183.46
+      },
+      {
+        "date": "2026-09-30",
+        "label": "30 Sept",
+        "kwh": 643.21,
+        "previous": 656.53,
+        "cost": 183.31
+      },
+      {
+        "date": "2026-10-01",
+        "label": "1 Oct",
+        "kwh": 665.92,
+        "previous": 651.51,
+        "cost": 189.79
+      },
+      {
+        "date": "2026-10-02",
+        "label": "2 Oct",
+        "kwh": 656.07,
+        "previous": 652.31,
+        "cost": 186.98
+      },
+      {
+        "date": "2026-10-03",
+        "label": "3 Oct",
+        "kwh": 391.96,
+        "previous": 414.86,
+        "cost": 111.71
+      }
+    ],
+    "tenants": [
+      {
+        "id": "T01",
+        "name": "Northstar Studio",
+        "floor": "Level 2",
+        "color": "#267765",
+        "kwh": 1588.04,
+        "cost": 452.59,
+        "meters": 2,
+        "coverage": 100
+      },
+      {
+        "id": "T02",
+        "name": "Juniper Labs",
+        "floor": "Level 3",
+        "color": "#68a38a",
+        "kwh": 1042.88,
+        "cost": 297.22,
+        "meters": 1,
+        "coverage": 100
+      },
+      {
+        "id": "T04",
+        "name": "Shared areas",
+        "floor": "Building-wide",
+        "color": "#c5dac9",
+        "kwh": 806.94,
+        "cost": 229.98,
+        "meters": 2,
+        "coverage": 97.6
+      },
+      {
+        "id": "T03",
+        "name": "Atlas Digital",
+        "floor": "Level 4",
+        "color": "#a3bcb0",
+        "kwh": 624.42,
+        "cost": 177.96,
+        "meters": 1,
+        "coverage": 100
+      }
+    ],
+    "meters": [
+      {
+        "id": "MW-001",
+        "name": "Studio main",
+        "tenant_id": "T01",
+        "location": "Level 2 · East wing",
+        "threshold_kwh": 18,
+        "interval_minutes": 60,
+        "tenant_name": "Northstar Studio",
+        "kwh": 723.46,
+        "coverage": 100,
+        "expected": 168,
+        "actual": 168,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 0
+      },
+      {
+        "id": "MW-002",
+        "name": "Studio air conditioning",
+        "tenant_id": "T01",
+        "location": "Level 2 · Plant room",
+        "threshold_kwh": 20,
+        "interval_minutes": 60,
+        "tenant_name": "Northstar Studio",
+        "kwh": 864.58,
+        "coverage": 100,
+        "expected": 168,
+        "actual": 168,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 1
+      },
+      {
+        "id": "MW-003",
+        "name": "Labs main",
+        "tenant_id": "T02",
+        "location": "Level 3 · West wing",
+        "threshold_kwh": 22,
+        "interval_minutes": 60,
+        "tenant_name": "Juniper Labs",
+        "kwh": 1042.88,
+        "coverage": 100,
+        "expected": 168,
+        "actual": 168,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 1
+      },
+      {
+        "id": "MW-004",
+        "name": "Digital main",
+        "tenant_id": "T03",
+        "location": "Level 4 · East wing",
+        "threshold_kwh": 18,
+        "interval_minutes": 60,
+        "tenant_name": "Atlas Digital",
+        "kwh": 624.42,
+        "coverage": 100,
+        "expected": 168,
+        "actual": 168,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 0
+      },
+      {
+        "id": "MW-005",
+        "name": "Common lighting",
+        "tenant_id": "T04",
+        "location": "Lobby & corridors",
+        "threshold_kwh": 12,
+        "interval_minutes": 60,
+        "tenant_name": "Shared areas",
+        "kwh": 312.99,
+        "coverage": 100,
+        "expected": 168,
+        "actual": 168,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 0
+      },
+      {
+        "id": "MW-006",
+        "name": "Building services",
+        "tenant_id": "T04",
+        "location": "Basement · Services",
+        "threshold_kwh": 16,
+        "interval_minutes": 60,
+        "tenant_name": "Shared areas",
+        "kwh": 493.95,
+        "coverage": 95.2,
+        "expected": 168,
+        "actual": 160,
+        "last_reading": "2026-10-03T15:00:00.000Z",
+        "active_alerts": 1
+      }
+    ],
+    "alerts": [
+      {
+        "id": "74c28f5afa1e9bb021257eae|demo-alert-2",
+        "meter_id": "MW-006",
+        "type": "missing_data",
+        "title": "Eight readings are missing",
+        "detail": "Building services has no readings from 03:00 to 11:00 SGT on the latest complete day. Check connectivity or import the missing hourly intervals.",
+        "severity": "medium",
+        "status": "open",
+        "recorded_at": "2026-10-02T19:00:00.000Z"
+      },
+      {
+        "id": "74c28f5afa1e9bb021257eae|demo-alert-3",
+        "meter_id": "MW-003",
+        "type": "consumption_spike",
+        "title": "Consumption above the meter threshold",
+        "detail": "Labs main used 27.6 kWh between 11:00 and 12:00 SGT. This exceeds its configured 22 kWh interval threshold.",
+        "severity": "medium",
+        "status": "investigating",
+        "recorded_at": "2026-10-02T03:00:00.000Z"
+      },
+      {
+        "id": "74c28f5afa1e9bb021257eae|demo-alert-1",
+        "meter_id": "MW-002",
+        "type": "consumption_spike",
+        "title": "Unusual after-hours consumption",
+        "detail": "Studio air conditioning used 28.4 kWh between 22:00 and 23:00 SGT. This exceeds its configured 20 kWh interval threshold. Check the operating schedule and equipment.",
+        "severity": "high",
+        "status": "open",
+        "recorded_at": "2026-10-01T14:00:00.000Z"
+      }
+    ]
+  },
+  "estate": {
+    "role": "manager",
+    "from": "2026-09-27",
+    "to": "2026-10-03",
+    "bounds": {
+      "from": "2026-09-20",
+      "to": "2026-10-03"
+    },
+    "catalogue": [
+      {
+        "id": "B01",
+        "town": "Ang Mo Kio",
+        "block": "101",
+        "street": "ANG MO KIO AVE 3",
+        "units": 88,
+        "floors": 12,
+        "completed": 1977,
+        "source_record_id": 101
+      },
+      {
+        "id": "B02",
+        "town": "Ang Mo Kio",
+        "block": "102",
+        "street": "ANG MO KIO AVE 3",
+        "units": 88,
+        "floors": 12,
+        "completed": 1977,
+        "source_record_id": 144
+      },
+      {
+        "id": "B03",
+        "town": "Bishan",
+        "block": "101",
+        "street": "BISHAN ST 12",
+        "units": 92,
+        "floors": 25,
+        "completed": 1986,
+        "source_record_id": 105
+      },
+      {
+        "id": "B04",
+        "town": "Bishan",
+        "block": "102",
+        "street": "BISHAN ST 12",
+        "units": 92,
+        "floors": 25,
+        "completed": 1986,
+        "source_record_id": 147
+      },
+      {
+        "id": "B05",
+        "town": "Tampines",
+        "block": "101",
+        "street": "TAMPINES ST 11",
+        "units": 120,
+        "floors": 11,
+        "completed": 1981,
+        "source_record_id": 124
+      },
+      {
+        "id": "B06",
+        "town": "Tampines",
+        "block": "102",
+        "street": "TAMPINES ST 11",
+        "units": 140,
+        "floors": 11,
+        "completed": 1982,
+        "source_record_id": 168
+      }
+    ],
+    "meters": [
+      {
+        "id": "B01-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B01",
+        "service": "lighting",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 101 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 7
+      },
+      {
+        "id": "B01-LIFTS",
+        "name": "Lifts",
+        "block_id": "B01",
+        "service": "lifts",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 101 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 10
+      },
+      {
+        "id": "B01-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B01",
+        "service": "pumps",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 101 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 5
+      },
+      {
+        "id": "B01-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B01",
+        "service": "solar",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 101 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      },
+      {
+        "id": "B02-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B02",
+        "service": "lighting",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 102 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 8
+      },
+      {
+        "id": "B02-LIFTS",
+        "name": "Lifts",
+        "block_id": "B02",
+        "service": "lifts",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 102 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 11
+      },
+      {
+        "id": "B02-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B02",
+        "service": "pumps",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 102 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 6
+      },
+      {
+        "id": "B02-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B02",
+        "service": "solar",
+        "tenant_id": "Ang Mo Kio",
+        "location": "Blk 102 ANG MO KIO AVE 3",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      },
+      {
+        "id": "B03-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B03",
+        "service": "lighting",
+        "tenant_id": "Bishan",
+        "location": "Blk 101 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 9
+      },
+      {
+        "id": "B03-LIFTS",
+        "name": "Lifts",
+        "block_id": "B03",
+        "service": "lifts",
+        "tenant_id": "Bishan",
+        "location": "Blk 101 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 12
+      },
+      {
+        "id": "B03-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B03",
+        "service": "pumps",
+        "tenant_id": "Bishan",
+        "location": "Blk 101 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 7
+      },
+      {
+        "id": "B03-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B03",
+        "service": "solar",
+        "tenant_id": "Bishan",
+        "location": "Blk 101 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      },
+      {
+        "id": "B04-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B04",
+        "service": "lighting",
+        "tenant_id": "Bishan",
+        "location": "Blk 102 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 10
+      },
+      {
+        "id": "B04-LIFTS",
+        "name": "Lifts",
+        "block_id": "B04",
+        "service": "lifts",
+        "tenant_id": "Bishan",
+        "location": "Blk 102 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 13
+      },
+      {
+        "id": "B04-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B04",
+        "service": "pumps",
+        "tenant_id": "Bishan",
+        "location": "Blk 102 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 8
+      },
+      {
+        "id": "B04-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B04",
+        "service": "solar",
+        "tenant_id": "Bishan",
+        "location": "Blk 102 BISHAN ST 12",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      },
+      {
+        "id": "B05-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B05",
+        "service": "lighting",
+        "tenant_id": "Tampines",
+        "location": "Blk 101 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 11
+      },
+      {
+        "id": "B05-LIFTS",
+        "name": "Lifts",
+        "block_id": "B05",
+        "service": "lifts",
+        "tenant_id": "Tampines",
+        "location": "Blk 101 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 14
+      },
+      {
+        "id": "B05-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B05",
+        "service": "pumps",
+        "tenant_id": "Tampines",
+        "location": "Blk 101 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 9
+      },
+      {
+        "id": "B05-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B05",
+        "service": "solar",
+        "tenant_id": "Tampines",
+        "location": "Blk 101 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      },
+      {
+        "id": "B06-LIGHTING",
+        "name": "Common-area lighting",
+        "block_id": "B06",
+        "service": "lighting",
+        "tenant_id": "Tampines",
+        "location": "Blk 102 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 12
+      },
+      {
+        "id": "B06-LIFTS",
+        "name": "Lifts",
+        "block_id": "B06",
+        "service": "lifts",
+        "tenant_id": "Tampines",
+        "location": "Blk 102 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 15
+      },
+      {
+        "id": "B06-PUMPS",
+        "name": "Water pumps",
+        "block_id": "B06",
+        "service": "pumps",
+        "tenant_id": "Tampines",
+        "location": "Blk 102 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 10
+      },
+      {
+        "id": "B06-SOLAR",
+        "name": "Rooftop solar",
+        "block_id": "B06",
+        "service": "solar",
+        "tenant_id": "Tampines",
+        "location": "Blk 102 TAMPINES ST 11",
+        "interval_minutes": 60,
+        "threshold_kwh": 60
+      }
+    ],
+    "blocks": [
+      {
+        "id": "B01",
+        "town": "Ang Mo Kio",
+        "block": "101",
+        "street": "ANG MO KIO AVE 3",
+        "units": 88,
+        "floors": 12,
+        "completed": 1977,
+        "source_record_id": 101,
+        "load": 1404.61,
+        "solar": 1022.01,
+        "grid": null,
+        "selfConsumed": null,
+        "exported": null,
+        "complete": false,
+        "received": 671,
+        "expected": 672,
+        "coverage": 99.85,
+        "kwhPerUnit": null,
+        "cost": null,
+        "co2Kg": null,
+        "issues": 1
+      },
+      {
+        "id": "B02",
+        "town": "Ang Mo Kio",
+        "block": "102",
+        "street": "ANG MO KIO AVE 3",
+        "units": 88,
+        "floors": 12,
+        "completed": 1977,
+        "source_record_id": 144,
+        "load": 1420.89,
+        "solar": 1070.61,
+        "grid": 798.12,
+        "selfConsumed": 622.77,
+        "exported": 447.84,
+        "complete": true,
+        "received": 672,
+        "expected": 672,
+        "coverage": 100,
+        "kwhPerUnit": 16.15,
+        "cost": 227.46,
+        "co2Kg": 320.84,
+        "issues": 1
+      },
+      {
+        "id": "B03",
+        "town": "Bishan",
+        "block": "101",
+        "street": "BISHAN ST 12",
+        "units": 92,
+        "floors": 25,
+        "completed": 1986,
+        "source_record_id": 105,
+        "load": 1496.78,
+        "solar": 1119.32,
+        "grid": 845.6,
+        "selfConsumed": 651.18,
+        "exported": 468.14,
+        "complete": true,
+        "received": 672,
+        "expected": 672,
+        "coverage": 100,
+        "kwhPerUnit": 16.27,
+        "cost": 241,
+        "co2Kg": 339.93,
+        "issues": 1
+      },
+      {
+        "id": "B04",
+        "town": "Bishan",
+        "block": "102",
+        "street": "BISHAN ST 12",
+        "units": 92,
+        "floors": 25,
+        "completed": 1986,
+        "source_record_id": 147,
+        "load": 1470.81,
+        "solar": 1167.98,
+        "grid": 816.29,
+        "selfConsumed": 654.52,
+        "exported": 513.46,
+        "complete": true,
+        "received": 672,
+        "expected": 672,
+        "coverage": 100,
+        "kwhPerUnit": 15.99,
+        "cost": 232.64,
+        "co2Kg": 328.15,
+        "issues": 0
+      },
+      {
+        "id": "B05",
+        "town": "Tampines",
+        "block": "101",
+        "street": "TAMPINES ST 11",
+        "units": 120,
+        "floors": 11,
+        "completed": 1981,
+        "source_record_id": 124,
+        "load": 1917.6,
+        "solar": 1195.05,
+        "grid": null,
+        "selfConsumed": null,
+        "exported": null,
+        "complete": false,
+        "received": 671,
+        "expected": 672,
+        "coverage": 99.85,
+        "kwhPerUnit": null,
+        "cost": null,
+        "co2Kg": null,
+        "issues": 1
+      },
+      {
+        "id": "B06",
+        "town": "Tampines",
+        "block": "102",
+        "street": "TAMPINES ST 11",
+        "units": 140,
+        "floors": 11,
+        "completed": 1982,
+        "source_record_id": 168,
+        "load": 2237.25,
+        "solar": 1265.36,
+        "grid": 1304.15,
+        "selfConsumed": 933.1,
+        "exported": 332.26,
+        "complete": true,
+        "received": 672,
+        "expected": 672,
+        "coverage": 100,
+        "kwhPerUnit": 15.98,
+        "cost": 371.68,
+        "co2Kg": 524.27,
+        "issues": 0
+      }
+    ],
+    "metrics": {
+      "load": 9947.94,
+      "solar": 6840.33,
+      "grid": null,
+      "selfConsumed": null,
+      "exported": null,
+      "complete": false,
+      "received": 4030,
+      "expected": 4032,
+      "coverage": 99.95,
+      "cost": null,
+      "co2Kg": null,
+      "change": null,
+      "units": 620,
+      "openOrders": 0,
+      "overdueOrders": 0
+    },
+    "chart": [
+      {
+        "date": "2026-09-27",
+        "label": "27 Sept",
+        "load": 1415.49,
+        "solar": 1056.7,
+        "grid": 792.27
+      },
+      {
+        "date": "2026-09-28",
+        "label": "28 Sept",
+        "load": 1432.56,
+        "solar": 921.2,
+        "grid": 818.01
+      },
+      {
+        "date": "2026-09-29",
+        "label": "29 Sept",
+        "load": 1398.72,
+        "solar": 947.88,
+        "grid": 793.08
+      },
+      {
+        "date": "2026-09-30",
+        "label": "30 Sept",
+        "load": 1415.49,
+        "solar": 1008.01,
+        "grid": 797.03
+      },
+      {
+        "date": "2026-10-01",
+        "label": "1 Oct",
+        "load": 1441.19,
+        "solar": 1069.29,
+        "grid": 810.4
+      },
+      {
+        "date": "2026-10-02",
+        "label": "2 Oct",
+        "load": 1413.06,
+        "solar": 899.64,
+        "grid": null
+      },
+      {
+        "date": "2026-10-03",
+        "label": "3 Oct",
+        "load": 1431.43,
+        "solar": 937.61,
+        "grid": null
+      }
+    ],
+    "services": [
+      {
+        "service": "lighting",
+        "kwh": 3333.22
+      },
+      {
+        "service": "lifts",
+        "kwh": 4164.03
+      },
+      {
+        "service": "pumps",
+        "kwh": 2450.69
+      },
+      {
+        "service": "solar",
+        "kwh": 6840.33
+      }
+    ],
+    "issues": [
+      {
+        "key": "B01-LIGHTING|missing",
+        "block_id": "B01",
+        "meter_id": "B01-LIGHTING",
+        "kind": "missing",
+        "title": "Missing meter intervals",
+        "detail": "1 hourly intervals are missing. Restore data before estimating grid use or carbon.",
+        "priority": "medium"
+      },
+      {
+        "key": "B02-LIGHTING|threshold",
+        "block_id": "B02",
+        "meter_id": "B02-LIGHTING",
+        "kind": "threshold",
+        "title": "Common-area lighting above threshold",
+        "detail": "2 intervals exceeded 8 kWh. Latest: 2026-10-03. Inspect the asset; this rule does not diagnose a fault.",
+        "priority": "high"
+      },
+      {
+        "key": "B03-PUMPS|threshold",
+        "block_id": "B03",
+        "meter_id": "B03-PUMPS",
+        "kind": "threshold",
+        "title": "Water pumps above threshold",
+        "detail": "3 intervals exceeded 7 kWh. Latest: 2026-10-03. Inspect the asset; this rule does not diagnose a fault.",
+        "priority": "high"
+      },
+      {
+        "key": "B05-SOLAR|missing",
+        "block_id": "B05",
+        "meter_id": "B05-SOLAR",
+        "kind": "missing",
+        "title": "Missing meter intervals",
+        "detail": "1 hourly intervals are missing. Restore data before estimating grid use or carbon.",
+        "priority": "medium"
+      }
+    ],
+    "orders": [],
+    "policy": {
+      "tariff": 0.285,
+      "gridFactor": 0.402,
+      "gridFactorYear": 2024,
+      "timeZone": "Asia/Singapore",
+      "highPriorityHours": 24,
+      "otherPriorityHours": 72
+    },
+    "source": {
+      "dataset_id": "d_17f5382f26140b1fdae0ba2ef6239d2f",
+      "publisher": "Housing & Development Board",
+      "title": "HDB Property Information",
+      "source_url": "https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view",
+      "api_url": "https://data.gov.sg/api/action/datastore_search",
+      "retrieved_at": "2026-10-03T18:06:47.151054+00:00",
+      "licence": "Singapore Open Data Licence",
+      "data_period_end": "2025-12",
+      "scope": "Six residential records selected for an independent demonstration. Asset installations and energy readings are simulated, not supplied by HDB.",
+      "blocks": [
+        {
+          "id": "B01",
+          "town": "Ang Mo Kio",
+          "block": "101",
+          "street": "ANG MO KIO AVE 3",
+          "units": 88,
+          "floors": 12,
+          "completed": 1977,
+          "source_record_id": 101
+        },
+        {
+          "id": "B02",
+          "town": "Ang Mo Kio",
+          "block": "102",
+          "street": "ANG MO KIO AVE 3",
+          "units": 88,
+          "floors": 12,
+          "completed": 1977,
+          "source_record_id": 144
+        },
+        {
+          "id": "B03",
+          "town": "Bishan",
+          "block": "101",
+          "street": "BISHAN ST 12",
+          "units": 92,
+          "floors": 25,
+          "completed": 1986,
+          "source_record_id": 105
+        },
+        {
+          "id": "B04",
+          "town": "Bishan",
+          "block": "102",
+          "street": "BISHAN ST 12",
+          "units": 92,
+          "floors": 25,
+          "completed": 1986,
+          "source_record_id": 147
+        },
+        {
+          "id": "B05",
+          "town": "Tampines",
+          "block": "101",
+          "street": "TAMPINES ST 11",
+          "units": 120,
+          "floors": 11,
+          "completed": 1981,
+          "source_record_id": 124
+        },
+        {
+          "id": "B06",
+          "town": "Tampines",
+          "block": "102",
+          "street": "TAMPINES ST 11",
+          "units": 140,
+          "floors": 11,
+          "completed": 1982,
+          "source_record_id": 168
+        }
+      ]
+    }
+  }
+}
