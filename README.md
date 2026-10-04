@@ -72,7 +72,7 @@ Open http://localhost:3001. To run the backend directly, use `python -m uvicorn 
 
 ## Vercel
 
-`vercel.json` keeps the existing Vite preset and routes only `/api/:path*` to `api/handler.py`. That file exports the FastAPI ASGI app. The checked-in Python version and dependency pins are used by the Python runtime. Frontend pages use hash navigation, so no frontend catch-all rewrite is required.
+`vercel.json` defines separate Vite and FastAPI services on the existing domain. `/api/(.*)` routes to the Python `backend.app:app` entrypoint; other paths route to the built frontend. Services preserve the original request paths. The checked-in Python version and dependency pins are used by the Python runtime.
 
 Keep the existing **server-only** `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` project environment variables. Never prefix secrets with `VITE_`. Vercel requires Turso; it cannot fall back to an ephemeral SQLite file. The health endpoint queries the database and identifies `backend: Python`, `framework: FastAPI`, version 2.1.0 and Turso storage. Protected previews remain protected.
 
