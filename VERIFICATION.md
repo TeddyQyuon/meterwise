@@ -8,7 +8,16 @@ Local verification: **45 pytest cases pass**, including a strict comparison agai
 
 The suite also covers visitor/area/tenant isolation; old Node-style cookies and persistent database restarts; completed CSV intervals, duplicate history and source reports; missing-versus-zero energy; exact origins before database access; UTF-8/media types and streamed byte limits; work-order evidence, optimistic versions and two conflicting saves producing one successful update and one conflict with exactly one new event.
 
-Runtime dependency audits report **0 known advisories** across the 17 pinned Python packages and the npm dependency graph. Reports are saved under `docs/security/`; pytest evidence is `docs/qa/v2.1/pytest.xml`. Live deployment evidence will be recorded after preview and production verification. Historical verification follows and describes earlier backends only.
+Runtime dependency audits report **0 known advisories** across the 17 pinned Python packages and the npm dependency graph. Reports are saved under `docs/security/`; pytest evidence is `docs/qa/v2.1/pytest.xml`. The final preview and production both report Python/FastAPI 2.1.0 with Turso after an actual database query. GitHub PR #2 passed both checks and merged as `7b80e694c75029891675a9969a74523ccc70de59`; Vercel production deployment `dpl_CDvFcnR54pkSbukbkQUSWVEr4p3P` is ready. Historical verification follows and describes earlier backends only.
+
+Production verification on 4 October 2026 SGT:
+
+- **All 11 live HTTP checks pass** against the Python service and real Turso storage. Two new synthetic workspaces exercise imports, exact block/hour balances, duplicate history, six-block source reports, invalid inputs, ordered maintenance with four events, stale updates, independent visitors, two-block/eight-asset area scope and the original building demo.
+- The existing cloud-browser workspace survived deployment: its original 27 September–3 October reporting period, 4,032/4,032 intervals (100% coverage), displayed 5,644 kWh grid import, prior CSV history and verified `WO-31fdeb7c` with its assignee and audit timeline were preserved.
+- The live Python CSV sample downloaded successfully. Uploading it into that existing workspace produced zero new readings, two duplicates, zero invalid rows and a disabled import action. Area-viewer UI restricted access to two Ang Mo Kio blocks and hid imports; switching back restored manager access.
+- The dashboard has zero application console errors in the observed cloud Chrome session. A scoped Vercel query returned no 5xx logs during verification. These are observations for this test window, not a guarantee of future uptime.
+- Evidence is `docs/qa/v2.1/live-api-checks.json`, `browser-checks.json`, `estate-report.csv`, `estate-production.jpg` and `pytest.xml`. No database credentials or session cookies are stored. Preview authentication stays enabled; preview health was checked through the authorized Vercel connector.
+
 
 ---
 
