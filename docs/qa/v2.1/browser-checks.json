@@ -1,0 +1,43 @@
+{
+  "url": "https://meterwise-kappa.vercel.app/",
+  "release_commit": "7b80e694c75029891675a9969a74523ccc70de59",
+  "backend": "Python 3.12 / FastAPI 2.1.0",
+  "checks": [
+    {
+      "check": "Preserved reporting window and repaired readings after production reload",
+      "status": "passed",
+      "from": "2026-09-27",
+      "to": "2026-10-03",
+      "intervals_present": 4032,
+      "intervals_expected": 4032,
+      "coverage_percent": 100,
+      "display_grid_kwh": 5644
+    },
+    {
+      "check": "Preserved verified work order and original audit timeline after reload",
+      "status": "passed",
+      "short_id": "WO-31fdeb7c",
+      "asset": "B03-PUMPS",
+      "assignee": "Estate review team (demo)"
+    },
+    {
+      "check": "Download Python CSV sample and preview in existing workspace",
+      "status": "passed",
+      "new_readings": 0,
+      "duplicates": 2,
+      "invalid_rows": 0,
+      "import_disabled": true,
+      "saved_import_history_retained": true
+    },
+    {
+      "check": "Area viewer permissions through UI",
+      "status": "passed",
+      "town": "Ang Mo Kio",
+      "blocks": 2,
+      "scope": "read only",
+      "import_action_absent": true
+    }
+  ],
+  "application_console_errors": 0,
+  "manager_access_restored": true
+}
