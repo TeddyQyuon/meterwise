@@ -93,7 +93,9 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
                 raise ApiError(400, "Choose a manager or tenant demo view.")
             if not provision_workspace(db, workspace, workspace_limit):
                 raise ApiError(503, "The demo is at capacity. Please contact the portfolio owner.")
-            ensure_workspace(db, workspace)
+            estate_view = request.query_params.get("view") == "estate"
+            if not estate_view:
+                ensure_workspace(db, workspace)
             access = {"role": role, "tenant_id": "T01" if role == "tenant" else None, "workspace_id": workspace}
             time = int(now().timestamp() * 1000)
             db.run("DELETE FROM sessions WHERE expires_at<?", [time])
@@ -102,7 +104,7 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
             token = secrets.token_hex(32)
             db.run("INSERT INTO sessions (token_hash,workspace_id,role,tenant_id,expires_at) VALUES (?,?,?,?,?)",
                    [sha256(token), workspace, role, access["tenant_id"], time + 604800000])
-            response = json_response(session_info(db, access))
+            response = json_response({"role": role, "tenantId": access["tenant_id"]} if estate_view else session_info(db, access))
             secure = request.url.scheme == "https" or bool(os.getenv("VERCEL"))
             response.set_cookie("mw_session", token, max_age=604800, httponly=True, samesite="lax", secure=secure)
             if not existing_visitor:
@@ -117,6 +119,10 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
         access = sessions[0]
         if path.startswith("/api/estate/"):
             return handle_estate(db, access, path, method, request.query_params, body)
+        if path == "/api/session" and method == "GET" and request.query_params.get("view") == "estate":
+            return json_response({"role": access["role"], "tenantId": access["tenant_id"]})
+        # Estate visitors only seed the separate building demo when they open it.
+        ensure_workspace(db, workspace)
         return handle_building(db, access, path, method, request.query_params, body)
 
     @api.api_route("/api/{path:path}", methods=["GET", "POST", "PATCH", "PUT", "DELETE", "HEAD", "OPTIONS"])
