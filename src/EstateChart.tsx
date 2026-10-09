@@ -1,0 +1,6 @@
+import {ResponsiveContainer,ComposedChart,Line,Area,CartesianGrid,XAxis,YAxis,Tooltip} from 'recharts';
+import type {EstateOverview} from '../shared/estate';
+const number=(value:number,digits=0)=>new Intl.NumberFormat('en-SG',{maximumFractionDigits:digits}).format(value);
+export default function EstateChart({data}:{data:EstateOverview['chart']}){
+  return <ResponsiveContainer width="100%" height="100%"><ComposedChart data={data} margin={{top:8,right:16,left:0,bottom:6}}><CartesianGrid vertical={false} stroke="#e8eee9" strokeDasharray="4 4"/><XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#65746b'}}/><YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#65746b'}} width={49}/><Tooltip formatter={(value)=>`${number(Number(value),2)} kWh`}/><Area name="Common load" type="monotone" dataKey="load" fill="#e1eee7" stroke="#1b5a40" strokeWidth={2} isAnimationActive={false}/><Line name="Solar generation" type="monotone" dataKey="solar" stroke="#ca922e" strokeWidth={2} dot={false} isAnimationActive={false}/><Line name="Grid import" type="monotone" dataKey="grid" stroke="#748dac" strokeDasharray="5 3" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/></ComposedChart></ResponsiveContainer>;
+}
