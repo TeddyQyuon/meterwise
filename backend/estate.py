@@ -27,7 +27,7 @@ from .csv_import import preview_import
 from .database import ROOT
 from .seed import reading_statements
 
-SOURCE = json.loads((ROOT / "data-source/hdb-property-snapshot.json").read_text())
+SOURCE = json.loads((ROOT / "data-source/hdb-property-snapshot.json").read_text(encoding="utf-8"))
 BLOCKS = SOURCE["blocks"]
 SERVICE_LABELS = {"lighting": "Common-area lighting", "lifts": "Lifts", "pumps": "Water pumps", "solar": "Rooftop solar"}
 METERS = [dict(id=f'{block["id"]}-{service.upper()}', name=label, block_id=block["id"], service=service,
@@ -213,6 +213,12 @@ def overview(db, access, query):
 
 def handle_estate(db, access, path, method, query, body):
     workspace = access["workspace_id"]
+    if path == "/api/estate/ml/forecast" and method in ("GET", "POST"):
+        from .ml.service import get_ml_forecast
+        return json_response(get_ml_forecast(db, access, query, body))
+    if path == "/api/estate/ml/anomalies" and method in ("GET", "POST"):
+        from .ml.service import get_ml_anomalies
+        return json_response(get_ml_anomalies(db, access, query, body))
     if path == "/api/estate/overview" and method == "GET":
         return json_response(overview(db, access, query))
     end = ensure_estate(db, workspace)

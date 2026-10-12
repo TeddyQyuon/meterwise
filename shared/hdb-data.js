@@ -71,4 +71,4 @@ export const hdbCatalogue = {
       "source_record_id": 168
     }
   ]
-} as const;
+};

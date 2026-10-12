@@ -41,7 +41,7 @@ def test_missing_is_distinct_from_zero_and_withholds_estimates():
 
 def test_api_matches_the_original_typescript_contract(client, monkeypatch):
     # The fixture was produced by the actual 2.0 TS handler before removing it.
-    fixture = json.loads((ROOT / "tests/fixtures/v2-api-contract.json").read_text())
+    fixture = json.loads((ROOT / "tests/fixtures/v2-api-contract.json").read_text(encoding="utf-8"))
     fixed_time = core.parse_time(fixture["clock"])
     def fixed_date(value=None):
         return core.singapore_date(value or fixed_time)

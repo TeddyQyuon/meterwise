@@ -3,4 +3,10 @@ import {createRoot} from 'react-dom/client';
 import App from './Portal';
 import './styles.css';
 import './estate.css';
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+import './ml.css';
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
