@@ -25,7 +25,7 @@ class DatabaseError(Exception):
 def migrations():
     statements = []
     for path in sorted((ROOT / "drizzle").glob("*.sql")):
-        for sql in path.read_text().split("--> statement-breakpoint"):
+        for sql in path.read_text(encoding="utf-8").split("--> statement-breakpoint"):
             if sql.strip():
                 statements.append((re.sub(r"CREATE (TABLE|(?:UNIQUE )?INDEX) ",
                                           r"CREATE \1 IF NOT EXISTS ", sql.strip()), []))

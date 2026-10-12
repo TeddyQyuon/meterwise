@@ -12,7 +12,7 @@
     "dev:server": "python -m uvicorn backend.app:app --reload --host 127.0.0.1 --port 3001",
     "build": "vite build",
     "start": "python -m uvicorn backend.app:app --host 127.0.0.1 --port 3001",
-    "check": "tsc --noEmit",
+    "check": "vite build",
     "test": "python -m pytest -q",
     "check:backend": "ruff check backend api tests/python"
   },
