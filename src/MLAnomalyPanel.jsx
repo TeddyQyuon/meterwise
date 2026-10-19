@@ -18,7 +18,10 @@ export default function MLAnomalyPanel({
   canWrite,
   onDispatchOrder,
   onOpenOrders,
+  policy,
 }) {
+  const tariff = policy?.tariff ?? 0.285;
+  const gridFactor = policy?.gridFactor ?? 0.402;
   const [filter, setFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
 
@@ -89,8 +92,8 @@ export default function MLAnomalyPanel({
         {filtered.length ? (
           filtered.map((anomaly) => {
             const isCritical = anomaly.severity === 'critical';
-            const excessCost = anomaly.excess_kwh > 0 ? (anomaly.excess_kwh * 0.285).toFixed(2) : null;
-            const excessCo2 = anomaly.excess_kwh > 0 ? (anomaly.excess_kwh * 0.402).toFixed(1) : null;
+            const excessCost = anomaly.excess_kwh > 0 ? (anomaly.excess_kwh * tariff).toFixed(2) : null;
+            const excessCo2 = anomaly.excess_kwh > 0 ? (anomaly.excess_kwh * gridFactor).toFixed(1) : null;
 
             return (
               <div

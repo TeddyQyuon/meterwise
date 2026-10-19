@@ -1,5 +1,5 @@
 import {lazy,Suspense,useState,useEffect,useCallback,useRef} from 'react';
-import {Zap,Building2,LayoutDashboard,UploadCloud,ClipboardCheck,FileBarChart2,BookOpen,ArrowUpRight,ArrowRight,Download,RefreshCw,Menu,X,Sun,Leaf,Activity,TriangleAlert,CheckCircle2,LoaderCircle,Eye,Plus,Search,Info,ShieldCheck,ChevronRight,Sparkles} from 'lucide-react';
+import {Zap,Building2,LayoutDashboard,UploadCloud,ClipboardCheck,FileBarChart2,BookOpen,ArrowUpRight,ArrowRight,Download,RefreshCw,Menu,X,Sun,Leaf,Activity,TriangleAlert,CheckCircle2,LoaderCircle,Eye,Plus,Search,Info,ShieldCheck,ChevronRight,Sparkles,ExternalLink} from 'lucide-react';
 const EstateChart=lazy(()=>import('./EstateChart'));
 import {serviceLabels} from '../shared/estate';
 import {addDays,dayStart} from '../shared/analytics';
@@ -8,6 +8,7 @@ import {fetchMLAnomalies} from './ml-api';
 import MLAnomalyBanner from './MLAnomalyBanner';
 import MLAnomalyPanel from './MLAnomalyPanel';
 const MLForecastView=lazy(()=>import('./MLForecastView'));
+import AuthModal from './AuthModal';
 
 const navigation=[
   {id:'estate',label:'Estate overview',title:'Estate energy operations',icon:LayoutDashboard},
@@ -40,6 +41,7 @@ export default function EstateApp(){
   const [loadedKey,setLoadedKey]=useState(''),[notice,setNotice]=useState(''),[navOpen,setNavOpen]=useState(false);
   const [newIssue,setNewIssue]=useState(null),[selected,setSelected]=useState(null);
   const [anomalies,setAnomalies]=useState([]);
+  const [authInfo,setAuthInfo]=useState(null),[authOpen,setAuthOpen]=useState(false);
   const bounds=useRef(null),counter=useRef(0),rail=useRef(null),navTrigger=useRef(null);
   const filterKey=[role,town,block,period,from,to].join('|');
   const notify=useCallback((message)=>setNotice(message),[]);
@@ -49,7 +51,14 @@ export default function EstateApp(){
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),6000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{
     let active=true;
-    (async()=>{try{let current;try{current=await estateApi('/session?view=estate');}catch(error){if(!(error instanceof RequestError)||error.status!==401)throw error;current=await estateApi('/session?view=estate',postEstate({role:'manager'}));}if(active)setRole(current.role);}catch(error){if(active){setError(error.message);setBusy(false);}}})();
+    (async()=>{
+      try{
+        let current;
+        try{current=await estateApi('/session?view=estate');}catch(error){if(!(error instanceof RequestError)||error.status!==401)throw error;current=await estateApi('/session?view=estate',postEstate({role:'manager'}));}
+        if(active)setRole(current.role);
+        try{const me=await estateApi('/auth/me');if(active)setAuthInfo(me);}catch{}
+      }catch(error){if(active){setError(error.message);setBusy(false);}}
+    })();
     return()=>{active=false;};
   },[]);
   const refresh=useCallback(async()=>{
@@ -72,6 +81,18 @@ export default function EstateApp(){
     finally{if(request===counter.current)setBusy(false);}
   },[role,town,block,period,from,to]);
   useEffect(()=>{void refresh();},[refresh]);
+  const handleAuthenticated=useCallback(async(res)=>{
+    try{const me=await estateApi('/auth/me');setAuthInfo(me);if(me?.role)setRole(me.role);}
+    catch{if(res)setAuthInfo({isDemo:false,orgName:res.orgName||res.user?.name,actorName:res.user?.name,role:res.role});}
+    await refresh();
+    notify(`Authenticated${res?.orgName?` to ${res.orgName}`:''}.`);
+  },[refresh,notify]);
+  const handleLogout=useCallback(async()=>{
+    try{const me=await estateApi('/auth/me');setAuthInfo(me);if(me?.role)setRole(me.role);}
+    catch{setAuthInfo({isDemo:true});}
+    await refresh();
+    notify('Signed out. Restored demo workspace.');
+  },[refresh,notify]);
   const ready=!!data&&!busy&&!error&&loadedKey===filterKey;
   const summary=useRef(null);summary.current=ready?data:null;
   useEffect(()=>{
@@ -107,7 +128,7 @@ export default function EstateApp(){
       <div className="sidebar-bottom"><div className="demo-card"><Leaf size={20}/><strong>Better data. Better estates.</strong><p>Independent pilot inspired by HDB’s Green Towns Programme.</p><a href="#overview">Open the building demo <ArrowUpRight size={14}/></a></div><div className="profile"><span className="avatar">{role==='manager'?'EM':'AV'}</span><div><strong>{role==='manager'?'Estate manager':'Area viewer'}</strong><span>{role==='manager'?'Demo operations workspace':'Ang Mo Kio · read only'}</span></div></div></div>
     </aside>
     <main className="main" id="main-content" inert={navOpen||undefined}>
-      <header className="topbar"><div className="breadcrumb"><button ref={navTrigger} className="icon-button mobile-menu" aria-label="Open navigation" aria-controls="estate-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/></button><span>Estate operations</span><span className="breadcrumb-divider">/</span><strong>{current.label}</strong></div><div className="top-actions"><Pill tone="demo">Independent pilot</Pill><button className="role-button" disabled={busy} onClick={()=>void switchRole()}><Eye size={16}/><span>{role==='manager'?'Preview area viewer':'Back to manager'}</span></button></div></header>
+      <header className="topbar"><div className="breadcrumb"><button ref={navTrigger} className="icon-button mobile-menu" aria-label="Open navigation" aria-controls="estate-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/></button><span>Estate operations</span><span className="breadcrumb-divider">/</span><strong>{current.label}</strong></div><div className="top-actions">{!authInfo?.isDemo&&authInfo?.orgName?<Pill tone="green">{authInfo.orgName}</Pill>:<Pill tone="demo">Independent pilot</Pill>}<button className="role-button" onClick={()=>setAuthOpen(true)}><Building2 size={16}/><span>{authInfo?.orgName?authInfo.orgName:'Client Sign In'}</span></button><button className="role-button" disabled={busy} onClick={()=>void switchRole()}><Eye size={16}/><span>{role==='manager'?'Preview area viewer':'Back to manager'}</span></button></div></header>
       <div className="page-content">
         <div className="estate-provenance"><span><ShieldCheck size={16}/><strong>Real HDB inventory</strong><span className="provenance-divider">/</span> Simulated meters & maintenance</span><button className="text-button" onClick={()=>navigate('estate-sources')}>About this pilot <ArrowUpRight size={14}/></button></div>
         <div className="page-heading"><div><div className="eyebrow">SINGAPORE · COMMON-AREA ENERGY</div><h1>{current.title}</h1><p>{page==='estate'?'See where energy goes. Prioritise what needs attention.':page==='estate-forecast'?'Hourly demand and rooftop solar ML forecasting with 95% confidence intervals and model accuracy metrics.':page==='estate-blocks'?'Compare registered blocks and inspect their simulated common-service assets.':page==='estate-imports'?'Restore missing intervals without hiding duplicates or invalid rows.':page==='estate-orders'?'Assign an inspection, record evidence, and verify the outcome.':page==='estate-reports'?'Export traceable block summaries and explore a lighting scenario.':'Public data, operational assumptions and calculation boundaries.'}</p></div><div className="heading-actions"><button className="icon-button bordered" aria-label="Refresh estate data" disabled={busy} onClick={()=>void refresh()}><RefreshCw size={18} className={busy?'spin':''}/></button>{page!=='estate-sources'&&<a className={`button secondary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/><span>Export report</span></a>}</div></div>
@@ -116,18 +137,19 @@ export default function EstateApp(){
         {busy&&<div className="data-status" role="status"><LoaderCircle size={16} className="spin"/> Updating your selection…</div>}
         {!data.metrics.complete&&page!=='estate-sources'&&<div className="estate-notice"><TriangleAlert size={20}/><div><strong>{data.metrics.expected-data.metrics.received} missing hourly readings</strong><span>Grid import, export, cost, carbon and comparisons are withheld until the selected data is complete.</span></div>{role==='manager'&&<button className="button secondary" onClick={()=>navigate('estate-imports')}>Repair data <ArrowRight size={16}/></button>}</div>}
         {page==='estate'&&<EstateOverviewPage data={data} anomalies={anomalies} onBlocks={()=>navigate('estate-blocks')} onIssue={issue=>setNewIssue(issue)} onOrders={()=>navigate('estate-orders')} onForecast={()=>navigate('estate-forecast')} canWrite={role==='manager'&&ready}/>}
-        {page==='estate-forecast'&&<Suspense fallback={<div className="data-status" role="status"><LoaderCircle size={18} className="spin"/> Loading ML forecast…</div>}><MLForecastView town={town} block={block} catalogue={data.catalogue}/></Suspense>}
-        {page==='estate-blocks'&&<BlocksPage data={data} onChoose={id=>{setBlock(id);navigate('estate');}}/>}
+        {page==='estate-forecast'&&<Suspense fallback={<div className="data-status" role="status"><LoaderCircle size={18} className="spin"/> Loading ML forecast…</div>}><MLForecastView town={town} block={block} catalogue={data.catalogue} policy={data.policy}/></Suspense>}
+        {page==='estate-blocks'&&<BlocksPage data={data} onChoose={id=>{setBlock(id);navigate('estate');}} canWrite={role==='manager'&&ready} onRefresh={refresh}/>}
         {page==='estate-imports'&&role==='manager'&&<EstateImports onSaved={async()=>{notify('Estate readings saved. Recalculating the selected period.');await refresh();}}/>}
         {page==='estate-orders'&&<OrdersPage data={data} onNew={()=>setNewIssue('manual')} onOpen={order=>void openOrder(order)} canWrite={role==='manager'&&ready}/>}
-        {page==='estate-reports'&&<ReportsPage data={data} reportQuery={reportQuery.toString()} ready={ready}/>}
+        {page==='estate-reports'&&<ReportsPage data={data} reportQuery={reportQuery.toString()} ready={ready} canWrite={role==='manager'&&ready} onRefresh={refresh}/>}
         {page==='estate-sources'&&<SourcesPage data={data}/>}
         <footer className="page-footer">Independent portfolio pilot · Not affiliated with HDB or any Town Council · Public building metadata; simulated operational data · SGT (UTC+8)</footer>
       </div>
     </main>
     {notice&&<div className="toast" role="status"><CheckCircle2 size={18}/>{notice}<button className="icon-button" aria-label="Dismiss notification" onClick={()=>setNotice('')}><X size={15}/></button></div>}
     {newIssue&&<NewOrderDialog data={data} issue={newIssue} onClose={()=>setNewIssue(null)} onSaved={async()=>{setNewIssue(null);navigate('estate-orders');notify('Work order created with an initial audit entry.');await refresh();}}/>}
-    {selected&&<OrderDialog order={selected} canWrite={role==='manager'} onClose={()=>setSelected(null)} onSaved={async()=>{const current=await estateApi(`/estate/orders/${encodeURIComponent(selected.id)}`);setSelected(current);notify('Work order updated and evidence recorded.');await refresh();}}/>}
+    {selected&&<OrderDialog order={selected} teams={data?.teams} canWrite={role==='manager'} onClose={()=>setSelected(null)} onSaved={async()=>{const current=await estateApi(`/estate/orders/${encodeURIComponent(selected.id)}`);setSelected(current);notify('Work order updated and evidence recorded.');await refresh();}}/>}
+    <AuthModal open={authOpen} onClose={()=>setAuthOpen(false)} authInfo={authInfo} onAuthenticated={handleAuthenticated} onLogout={handleLogout}/>
   </div>;
 }
 
@@ -139,12 +161,93 @@ function EstateOverviewPage({data,anomalies,onBlocks,onIssue,onOrders,onForecast
     <Panel title="Common services" subtitle="Recorded energy by service" className="estate-services">{data.services.filter(item=>item.service!=='solar').map((item,index)=><div className="estate-service" key={item.service}><span className={`service-mark service-${index}`}>{item.service==='pumps'?<Activity size={17}/>:<Zap size={17}/>}</span><div><strong>{serviceLabels[item.service]}</strong><div className="service-track"><span style={{width:`${Math.max(2,item.kwh/data.metrics.load*100)}%`}}/></div></div><strong>{number(item.kwh)}<small>kWh</small></strong></div>)}<div className="estate-service-foot"><Sun size={22}/><div><strong>{data.metrics.selfConsumed===null?'Solar split withheld':`${number(data.metrics.selfConsumed)} kWh solar used on site`}</strong><p>{data.metrics.exported===null?'Restore missing readings to split self-consumption and exports.':`${number(data.metrics.exported)} kWh exported in matching intervals. Export revenue is excluded.`}</p></div></div></Panel></div>
     <div className="estate-grid estate-bottom-grid"><Panel title="Blocks at a glance" subtitle="Compare common-service energy per dwelling unit" action={<button className="text-button" onClick={onBlocks}>All blocks <ArrowUpRight size={14}/></button>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block</th><th>Common load</th><th>kWh / unit</th><th>Coverage</th></tr></thead><tbody>{data.blocks.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.town} · {block.street}</small></td><td>{number(block.load)} kWh</td><td>{block.kwhPerUnit===null?'Withheld':number(block.kwhPerUnit,2)}</td><td><Pill tone={block.complete?'green':'amber'}>{block.coverage}%</Pill></td></tr>)}</tbody></table></div></Panel>
     <Panel title="Needs an inspection" subtitle="Rules identify exceptions; they do not diagnose faults." action={<Pill tone="amber">{data.issues.length}</Pill>}><div className="estate-issues">{data.issues.length?data.issues.slice(0,5).map(issue=><div className="estate-issue" key={issue.key}><span className={`alert-icon ${issue.priority==='high'?'high':'medium'}`}>{issue.kind==='missing'?<Activity size={17}/>:<TriangleAlert size={17}/>}</span><div><strong>{issue.title}</strong><small>{issue.meter_id} · {data.catalogue.find(block=>block.id===issue.block_id)?.town}</small></div>{canWrite&&<button className="text-button" aria-label={`Create work order for ${issue.meter_id} ${issue.kind}`} onClick={()=>onIssue(issue)}>Inspect <ChevronRight size={15}/></button>}</div>):<div className="estate-empty"><CheckCircle2 size={25}/><p>No exceptions in this selection.</p></div>}</div><div className="panel-note"><ClipboardCheck size={16}/><button className="text-button" onClick={onOrders}>Open the maintenance queue</button></div></Panel></div>
-    <div id="ml-anomaly-section"><MLAnomalyPanel anomalies={anomalies} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders}/></div></>;
+    <div id="ml-anomaly-section"><MLAnomalyPanel anomalies={anomalies} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders} policy={data.policy}/></div></>;
 }
 
-function BlocksPage({data,onChoose}){
-  const [search,setSearch]=useState('');const shown=data.blocks.filter(block=>`${block.block} ${block.street} ${block.town}`.toLowerCase().includes(search.toLowerCase()));
-  return <><div className="estate-block-highlights"><div><Building2 size={24}/><strong>{data.blocks.length}</strong><span>Public HDB building records</span></div><div><Zap size={24}/><strong>{data.meters.length}</strong><span>Simulated service meters</span></div><div><Activity size={24}/><strong>{data.metrics.units}</strong><span>Dwelling units from public data</span></div></div><Panel title="Block register" subtitle="Building information comes from HDB Property Information. Equipment is simulated." action={<label className="estate-search"><Search size={16}/><input aria-label="Search estate blocks" placeholder="Search block or street" value={search} onChange={event=>setSearch(event.target.value)}/></label>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block & street</th><th>Town</th><th>Units / floors</th><th>Completed</th><th>Demo asset IDs</th><th>Action</th></tr></thead><tbody>{shown.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.street}</small></td><td>{block.town}</td><td>{block.units} / {block.floors}</td><td>{block.completed}</td><td>{data.meters.filter(meter=>meter.block_id===block.id).map(meter=><span className="estate-asset-id" key={meter.id}>{meter.id}</span>)}</td><td><button className="text-button" onClick={()=>onChoose(block.id)}>View block <ArrowUpRight size={14}/></button></td></tr>)}</tbody></table></div>{!shown.length&&<div className="estate-empty">No blocks match this search.</div>}</Panel><div className="estate-notice"><Info size={19}/><span>The public inventory does not describe these blocks’ actual installed solar systems, meter readings or maintenance conditions. All equipment and exceptions in this pilot are simulated.</span></div></>;
+function BlocksPage({data,onChoose,canWrite,onRefresh}){
+  const [search,setSearch]=useState('');
+  const [addBlockOpen,setAddBlockOpen]=useState(false);
+  const [addMeterOpen,setAddMeterOpen]=useState(false);
+  const shown=data.blocks.filter(block=>`${block.block} ${block.street} ${block.town}`.toLowerCase().includes(search.toLowerCase()));
+  return <><div className="estate-block-highlights"><div><Building2 size={24}/><strong>{data.blocks.length}</strong><span>Public HDB building records</span></div><div><Zap size={24}/><strong>{data.meters.length}</strong><span>Simulated service meters</span></div><div><Activity size={24}/><strong>{data.metrics.units}</strong><span>Dwelling units from public data</span></div></div><Panel title="Block register" subtitle="Building information comes from HDB Property Information. Equipment is simulated." action={<div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><label className="estate-search"><Search size={16}/><input aria-label="Search estate blocks" placeholder="Search block or street" value={search} onChange={event=>setSearch(event.target.value)}/></label>{canWrite&&<><button type="button" className="button primary" onClick={()=>setAddBlockOpen(true)}><Plus size={16}/><span>Add Block</span></button><button type="button" className="button secondary" onClick={()=>setAddMeterOpen(true)}><Plus size={16}/><span>Add Meter</span></button></>}</div>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block & street</th><th>Town</th><th>Units / floors</th><th>Completed</th><th>Demo asset IDs</th><th>Action</th></tr></thead><tbody>{shown.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.street}</small></td><td>{block.town}</td><td>{block.units} / {block.floors}</td><td>{block.completed}</td><td>{data.meters.filter(meter=>meter.block_id===block.id).map(meter=><span className="estate-asset-id" key={meter.id}>{meter.id}</span>)}</td><td><button className="text-button" onClick={()=>onChoose(block.id)}>View block <ArrowUpRight size={14}/></button></td></tr>)}</tbody></table></div>{!shown.length&&<div className="estate-empty">No blocks match this search.</div>}</Panel><div className="estate-notice"><Info size={19}/><span>The public inventory does not describe these blocks’ actual installed solar systems, meter readings or maintenance conditions. All equipment and exceptions in this pilot are simulated.</span></div>
+    {addBlockOpen&&<AddBlockDialog onClose={()=>setAddBlockOpen(false)} onRefresh={onRefresh}/>}
+    {addMeterOpen&&<AddMeterDialog blocks={data.blocks} onClose={()=>setAddMeterOpen(false)} onRefresh={onRefresh}/>}
+  </>;
+}
+
+function AddBlockDialog({onClose,onRefresh}){
+  const [id,setId]=useState(''),[town,setTown]=useState('Ang Mo Kio'),[block,setBlock]=useState(''),[street,setStreet]=useState(''),[units,setUnits]=useState(100),[floors,setFloors]=useState(12),[completed,setCompleted]=useState(2021);
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  async function submit(event){
+    event.preventDefault();
+    if(busy)return;
+    setBusy(true);setError('');
+    try{
+      await estateApi('/estate/blocks',postEstate({
+        id:id.trim().toUpperCase(),
+        town:town.trim(),
+        block:block.trim(),
+        street:street.trim().toUpperCase(),
+        units:Number(units),
+        floors:Number(floors),
+        completed:Number(completed)
+      }));
+      await onRefresh();
+      onClose();
+    }catch(err){setError(err.message);}
+    finally{setBusy(false);}
+  }
+  return <Dialog title="Add Registered Block" onClose={onClose}>
+    <form onSubmit={submit} className="estate-form">
+      <label>Block Identifier (e.g. B07)<input required minLength={2} maxLength={24} aria-label="Block Identifier" placeholder="B07" value={id} onChange={e=>setId(e.target.value)}/></label>
+      <label>Town<input required minLength={2} maxLength={60} aria-label="Town" placeholder="Ang Mo Kio" value={town} onChange={e=>setTown(e.target.value)}/></label>
+      <label>Block Number<input required minLength={1} maxLength={20} aria-label="Block Number" placeholder="412" value={block} onChange={e=>setBlock(e.target.value)}/></label>
+      <label>Street Name<input required minLength={3} maxLength={120} aria-label="Street Name" placeholder="ANG MO KIO AVE 10" value={street} onChange={e=>setStreet(e.target.value)}/></label>
+      <label>Dwelling Units<input type="number" min={1} max={2000} required aria-label="Dwelling Units" value={units} onChange={e=>setUnits(e.target.value)}/></label>
+      <label>Floors<input type="number" min={1} max={100} required aria-label="Floors" value={floors} onChange={e=>setFloors(e.target.value)}/></label>
+      <label>Year Completed<input type="number" min={1950} max={2035} required aria-label="Year Completed" value={completed} onChange={e=>setCompleted(e.target.value)}/></label>
+      {error&&<p role="alert" className="estate-form-error">{error}</p>}
+      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Block'}</button></div>
+    </form>
+  </Dialog>;
+}
+
+function AddMeterDialog({blocks,onClose,onRefresh}){
+  const defaultBlock = blocks[0]?.id || 'B01';
+  const [id,setId]=useState(''),[blockId,setBlockId]=useState(defaultBlock),[service,setService]=useState('lighting'),[name,setName]=useState(''),[thresholdKwh,setThresholdKwh]=useState(10),[readingMode,setReadingMode]=useState('interval_kwh'),[multiplier,setMultiplier]=useState(1.0);
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  async function submit(event){
+    event.preventDefault();
+    if(busy)return;
+    setBusy(true);setError('');
+    try{
+      await estateApi('/estate/meters',postEstate({
+        id:id.trim().toUpperCase(),
+        blockId,
+        service,
+        name:name.trim()||serviceLabels[service]||service,
+        thresholdKwh:Number(thresholdKwh),
+        readingMode,
+        multiplier:Number(multiplier)
+      }));
+      await onRefresh();
+      onClose();
+    }catch(err){setError(err.message);}
+    finally{setBusy(false);}
+  }
+  return <Dialog title="Add Service Meter" onClose={onClose}>
+    <form onSubmit={submit} className="estate-form">
+      <label>Meter Identifier (e.g. B07-LIGHTING)<input required minLength={3} maxLength={40} aria-label="Meter Identifier" placeholder="B07-LIGHTING" value={id} onChange={e=>setId(e.target.value)}/></label>
+      <label>Registered Block<select aria-label="Registered Block" value={blockId} onChange={e=>setBlockId(e.target.value)}>{blocks.map(b=><option key={b.id} value={b.id}>Blk {b.block} · {b.street} ({b.id})</option>)}</select></label>
+      <label>Service Category<select aria-label="Service Category" value={service} onChange={e=>setService(e.target.value)}><option value="lighting">Common-area lighting</option><option value="lifts">Lifts</option><option value="pumps">Water pumps</option><option value="solar">Rooftop solar</option></select></label>
+      <label>Meter Name (optional)<input maxLength={80} aria-label="Meter Name" placeholder={serviceLabels[service]||'Common-area lighting'} value={name} onChange={e=>setName(e.target.value)}/></label>
+      <label>Threshold (kWh / interval)<input type="number" step="0.1" min="0.1" max="100000" required aria-label="Threshold kWh" value={thresholdKwh} onChange={e=>setThresholdKwh(e.target.value)}/></label>
+      <label>Reading Mode<select aria-label="Reading Mode" value={readingMode} onChange={e=>setReadingMode(e.target.value)}><option value="interval_kwh">Interval kWh (completed hourly interval)</option><option value="cumulative_register">Cumulative Register</option></select></label>
+      <label>Multiplier<input type="number" step="0.001" min="0.001" max="10000" required aria-label="Multiplier" value={multiplier} onChange={e=>setMultiplier(e.target.value)}/></label>
+      {error&&<p role="alert" className="estate-form-error">{error}</p>}
+      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Meter'}</button></div>
+    </form>
+  </Dialog>;
 }
 
 function EstateImports({onSaved}){
@@ -174,16 +277,63 @@ function NewOrderDialog({data,issue,onClose,onSaved}){
   return <Dialog title={isML ? `Dispatch inspection: ${issue.meter_id}` : "Create inspection work order"} onClose={onClose}><form onSubmit={submit} className="estate-form"><label>Registered demo asset<select aria-label="Work order asset" value={meterId} onChange={event=>setMeterId(event.target.value)}>{data.meters.map(meter=><option value={meter.id} key={meter.id}>{meter.id} · {meter.location}</option>)}</select></label><label>Title<input aria-label="Work order title" minLength={5} maxLength={160} required value={title} onChange={event=>setTitle(event.target.value)}/></label><label>Priority<select aria-label="Work order priority" value={priority} onChange={event=>setPriority(event.target.value)}><option value="high">High · 24-hour demo target</option><option value="medium">Medium · 72-hour demo target</option><option value="low">Low · 72-hour demo target</option></select></label><label>Initial inspection context<textarea aria-label="Initial inspection context" minLength={12} maxLength={1200} required rows={4} value={note} onChange={event=>setNote(event.target.value)}/></label><p className="field-hint">{isML ? 'Pre-filled with diagnostic evidence from the Isolation Forest anomaly detector. Creates an audited inspection work order.' : 'Only simulated inspection details. Creating an order records an audit event; it does not dispatch a real contractor.'}</p>{error&&<p role="alert" className="estate-form-error">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={busy}>{busy?'Saving…':'Create work order'}</button></div></form></Dialog>;
 }
 
-function OrderDialog({order,canWrite,onClose,onSaved}){
-  const [status,setStatus]=useState(nextStatus[order.status][0]),[assignee,setAssignee]=useState(order.assignee||'Electrical maintenance team (demo)'),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+function OrderDialog({order,teams,canWrite,onClose,onSaved}){
+  const defaultTeams=['Electrical maintenance team (demo)','Lift maintenance team (demo)','Pump maintenance team (demo)','Estate review team (demo)'];
+  const teamList=(teams&&teams.length>0)?teams.map(t=>typeof t==='string'?t:(t.name.includes('(demo)')?t.name:`${t.name} (demo)`)):defaultTeams;
+  if(order.assignee&&!teamList.includes(order.assignee))teamList.unshift(order.assignee);
+  const [status,setStatus]=useState(nextStatus[order.status][0]),[assignee,setAssignee]=useState(order.assignee||teamList[0]),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   useEffect(()=>{setStatus(nextStatus[order.status][0]);setNote('');},[order.version,order.status]);
   async function submit(event){event.preventDefault();if(busy)return;setBusy(true);setError('');try{await estateApi(`/estate/orders/${encodeURIComponent(order.id)}`,{method:'PATCH',body:JSON.stringify({version:order.version,status,assignee,note})});await onSaved();}catch(error){setError(error.message);}finally{setBusy(false);}}
-  return <Dialog title={order.title} onClose={onClose}><div className="estate-order-summary"><Pill tone="blue">{statusLabel[order.status]}</Pill><span>{order.meter_id} · Version {order.version}</span><span>Due {stamp(order.due_at)} SGT</span></div>{canWrite&&<form className="estate-form" onSubmit={submit}><label>Next workflow step<select aria-label="Next work order status" value={status} onChange={event=>setStatus(event.target.value)}>{nextStatus[order.status].map(value=><option key={value} value={value}>{statusLabel[value]}</option>)}</select></label><label>Assigned demo team<select aria-label="Assigned demo team" value={assignee} onChange={event=>setAssignee(event.target.value)}><option>Electrical maintenance team (demo)</option><option>Lift maintenance team (demo)</option><option>Pump maintenance team (demo)</option><option>Estate review team (demo)</option></select></label><label>Inspection / verification evidence<textarea aria-label="Work order evidence" minLength={12} maxLength={1200} required rows={3} value={note} onChange={event=>setNote(event.target.value)}/></label><p className="field-hint">Record what was checked and the simulated outcome. Verification requires a separate workflow step.</p>{error&&<p role="alert" className="estate-form-error">{error}</p>}<button className="button primary" disabled={busy}>{busy?'Saving…':'Save workflow step'}</button></form>}<div className="estate-audit"><h3>Evidence & audit timeline</h3>{order.events?.map(event=><div className="estate-audit-event" key={event.id}><span className="audit-dot"/><div><strong>{event.action.replaceAll('_',' ')}</strong><p>{event.body}</p><small>{event.actor} · {stamp(event.created_at)} SGT</small></div></div>)}</div></Dialog>;
+  return <Dialog title={order.title} onClose={onClose}><div className="estate-order-summary"><Pill tone="blue">{statusLabel[order.status]}</Pill><span>{order.meter_id} · Version {order.version}</span><span>Due {stamp(order.due_at)} SGT</span></div>{canWrite&&<form className="estate-form" onSubmit={submit}><label>Next workflow step<select aria-label="Next work order status" value={status} onChange={event=>setStatus(event.target.value)}>{nextStatus[order.status].map(value=><option key={value} value={value}>{statusLabel[value]}</option>)}</select></label><label>Assigned demo team<select aria-label="Assigned demo team" value={assignee} onChange={event=>setAssignee(event.target.value)}>{teamList.map(name=><option key={name} value={name}>{name}</option>)}</select></label><label>Inspection / verification evidence<textarea aria-label="Work order evidence" minLength={12} maxLength={1200} required rows={3} value={note} onChange={event=>setNote(event.target.value)}/></label><p className="field-hint">Record what was checked and the simulated outcome. Verification requires a separate workflow step.</p>{error&&<p role="alert" className="estate-form-error">{error}</p>}<button className="button primary" disabled={busy}>{busy?'Saving…':'Save workflow step'}</button></form>}<div className="estate-audit"><h3>Evidence & audit timeline</h3>{order.events?.map(event=><div className="estate-audit-event" key={event.id}><span className="audit-dot"/><div><strong>{event.action.replaceAll('_',' ')}</strong><p>{event.body}</p><small>{event.actor} · {stamp(event.created_at)} SGT</small></div></div>)}</div></Dialog>;
 }
 
-function ReportsPage({data,reportQuery,ready}){
+function ReportsPage({data,reportQuery,ready,canWrite,onRefresh}){
   const [reduction,setReduction]=useState(15),lighting=data.services.find(item=>item.service==='lighting')?.kwh??0,potential=lighting*reduction/100;
-  return <><div className="report-card"><div className="report-cover"><span className="report-icon"><FileBarChart2 size={36}/></span><div><div className="eyebrow">ESTATE ENERGY BRIEF</div><h2>One report. A traceable source.</h2><p>{date(data.from)} – {date(data.to)}</p><span className="report-meta">{data.blocks.length} blocks · public inventory + simulated energy</span></div></div><div className="report-download"><h3>Download block summary</h3><p>Load, solar, separate grid imports/exports, coverage, public dwelling units and source metadata. Missing-data estimates remain blank.</p><a className={`button primary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/>Download estate CSV</a></div></div><div className="estate-grid"><Panel title="Lighting improvement scenario" subtitle="A what-if calculation; no intervention or savings is claimed."><div className="estate-scenario"><label htmlFor="lighting-reduction">Assumed lighting reduction <strong>{reduction}%</strong></label><input id="lighting-reduction" aria-label="Lighting reduction percentage" type="range" min={0} max={40} step={1} value={reduction} onChange={event=>setReduction(Number(event.target.value))}/><div className="scenario-range"><span>0%</span><span>40%</span></div><div className="scenario-result"><Leaf size={28}/><div><strong>{data.metrics.complete?`${number(potential,2)} kWh`:'Awaiting complete readings'}</strong><span>Potential common-load reduction in this reporting period</span></div></div><p>Calculation: recorded lighting consumption × assumed reduction. This estimates load reduction, not grid-bill savings; solar overlap, contracts, occupancy, capital costs and rebound effects are excluded.</p></div></Panel><Panel title="Reporting assumptions" subtitle="Keep operational decisions tied to their evidence."><dl className="estate-assumptions"><div><dt>Grid energy estimate</dt><dd>{data.metrics.grid===null?'Withheld':`${number(data.metrics.grid,2)} kWh`}</dd></div><div><dt>Estimated grid energy charge</dt><dd>{data.metrics.cost===null?'Withheld':money(data.metrics.cost)}</dd></div><div><dt>Configured illustrative tariff</dt><dd>S$0.285 / kWh · excludes GST, solar PPA, other charges and export revenue</dd></div><div><dt>Grid CO₂ estimate</dt><dd>{data.metrics.co2Kg===null?'Withheld':`${number(data.metrics.co2Kg,2)} kg CO₂`}</dd></div><div><dt>EMA historical grid factor</dt><dd>2024: 0.402 kg CO₂ / kWh · not a 2026 factor or audited carbon report</dd></div></dl></Panel></div></>;
+  const [editPolicyOpen,setEditPolicyOpen]=useState(false);
+  const tariffDisplay = data.policy?.tariff !== undefined ? data.policy.tariff : 0.285;
+  const gridFactorDisplay = data.policy?.gridFactor !== undefined ? data.policy.gridFactor : 0.402;
+  const gridFactorYear = data.policy?.gridFactorYear ?? 2024;
+  return <><div className="report-card"><div className="report-cover"><span className="report-icon"><FileBarChart2 size={36}/></span><div><div className="eyebrow">ESTATE ENERGY BRIEF</div><h2>One report. A traceable source.</h2><p>{date(data.from)} – {date(data.to)}</p><span className="report-meta">{data.blocks.length} blocks · public inventory + simulated energy</span></div></div><div className="report-download"><h3>Download block summary</h3><p>Load, solar, separate grid imports/exports, coverage, public dwelling units and source metadata. Missing-data estimates remain blank.</p><a className={`button primary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/>Download estate CSV</a></div></div><div className="estate-grid"><Panel title="Lighting improvement scenario" subtitle="A what-if calculation; no intervention or savings is claimed."><div className="estate-scenario"><label htmlFor="lighting-reduction">Assumed lighting reduction <strong>{reduction}%</strong></label><input id="lighting-reduction" aria-label="Lighting reduction percentage" type="range" min={0} max={40} step={1} value={reduction} onChange={event=>setReduction(Number(event.target.value))}/><div className="scenario-range"><span>0%</span><span>40%</span></div><div className="scenario-result"><Leaf size={28}/><div><strong>{data.metrics.complete?`${number(potential,2)} kWh`:'Awaiting complete readings'}</strong><span>Potential common-load reduction in this reporting period</span></div></div><p>Calculation: recorded lighting consumption × assumed reduction. This estimates load reduction, not grid-bill savings; solar overlap, contracts, occupancy, capital costs and rebound effects are excluded.</p></div></Panel><Panel title="Reporting assumptions" subtitle="Keep operational decisions tied to their evidence." action={canWrite&&<button type="button" className="button secondary" onClick={()=>setEditPolicyOpen(true)}>Edit Tariff & Carbon Policy</button>}><dl className="estate-assumptions"><div><dt>Grid energy estimate</dt><dd>{data.metrics.grid===null?'Withheld':`${number(data.metrics.grid,2)} kWh`}</dd></div><div><dt>Estimated grid energy charge</dt><dd>{data.metrics.cost===null?'Withheld':money(data.metrics.cost)}</dd></div><div><dt>Configured illustrative tariff</dt><dd>S${tariffDisplay} / kWh · excludes GST, solar PPA, other charges and export revenue</dd></div><div><dt>Grid CO₂ estimate</dt><dd>{data.metrics.co2Kg===null?'Withheld':`${number(data.metrics.co2Kg,2)} kg CO₂`}</dd></div><div><dt>EMA historical grid factor</dt><dd>{gridFactorYear}: {gridFactorDisplay} kg CO₂ / kWh · not a 2026 factor or audited carbon report</dd></div></dl></Panel></div>
+    {editPolicyOpen&&<EditPolicyDialog policy={data.policy} onClose={()=>setEditPolicyOpen(false)} onRefresh={onRefresh}/>}
+  </>;
+}
+
+function EditPolicyDialog({policy,onClose,onRefresh}){
+  const [tariff,setTariff]=useState(policy?.tariff??0.285);
+  const [gridFactor,setGridFactor]=useState(policy?.gridFactor??0.402);
+  const [highPriorityHours,setHighPriorityHours]=useState(policy?.highPriorityHours??24);
+  const [otherPriorityHours,setOtherPriorityHours]=useState(policy?.otherPriorityHours??72);
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  async function submit(event){
+    event.preventDefault();
+    if(busy)return;
+    setBusy(true);setError('');
+    try{
+      await estateApi('/estate/policy',{
+        method:'PATCH',
+        body:JSON.stringify({
+          tariff:Number(tariff),
+          gridFactor:Number(gridFactor),
+          highPriorityHours:Number(highPriorityHours),
+          otherPriorityHours:Number(otherPriorityHours)
+        })
+      });
+      await onRefresh();
+      onClose();
+    }catch(err){setError(err.message);}
+    finally{setBusy(false);}
+  }
+  return <Dialog title="Edit Tariff & Carbon Policy" onClose={onClose}>
+    <form onSubmit={submit} className="estate-form">
+      <label>Illustrative Grid Tariff (S$ / kWh)<input type="number" step="0.001" min="0.01" max="5.0" required aria-label="Illustrative Grid Tariff" value={tariff} onChange={e=>setTariff(e.target.value)}/></label>
+      <label>EMA Grid Emission Factor (kg CO₂ / kWh)<input type="number" step="0.001" min="0.0" max="5.0" required aria-label="EMA Grid Emission Factor" value={gridFactor} onChange={e=>setGridFactor(e.target.value)}/></label>
+      <label>High Priority SLA Target (hours)<input type="number" min={1} max={720} required aria-label="High Priority SLA Target" value={highPriorityHours} onChange={e=>setHighPriorityHours(e.target.value)}/></label>
+      <label>Normal Priority SLA Target (hours)<input type="number" min={1} max={720} required aria-label="Normal Priority SLA Target" value={otherPriorityHours} onChange={e=>setOtherPriorityHours(e.target.value)}/></label>
+      <p className="field-hint">Updates the workspace pricing, carbon calculations, and work order target response times.</p>
+      {error&&<p role="alert" className="estate-form-error">{error}</p>}
+      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Policy'}</button></div>
+    </form>
+  </Dialog>;
 }
 
 function SourcesPage({data}){
