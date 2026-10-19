@@ -15,6 +15,7 @@ from .core import (
     now,
     plain_filename,
     require_manager,
+    required_text,
     rounded,
     sha256,
     singapore_date,
@@ -53,7 +54,7 @@ def session_info(db, access):
     ids = {meter["tenant_id"] for meter in meters}
     return {"role": access["role"], "tenantId": access["tenant_id"],
             "workspace": {**workspaces[0], "timezone": "Asia/Singapore"},
-            "tenants": [tenant for tenant in tenants if tenant["id"] in ids], "meters": meters,
+            "tenants": [tenant for tenant in tenants if access["role"] == "manager" or tenant["id"] in ids], "meters": meters,
             "bounds": {"from": singapore_date(bounds["first"]), "to": singapore_date(bounds["last"])}}
 
 
@@ -180,6 +181,40 @@ def handle_building(db, access, path, method, query, body):
         return json_response(session_info(db, access))
     if path == "/api/dashboard" and method == "GET":
         return json_response(dashboard(db, access, query))
+    if path == "/api/workspace" and method == "PATCH":
+        require_manager(access)
+        name = required_text(body.get("name"), "Building name", 2, 100)
+        tariff = float(body.get("tariff", 0.285))
+        if not 0.01 <= tariff <= 5.0:
+            raise ApiError(400, "Tariff must be between S$0.01 and S$5.00 per kWh.")
+        db.run("UPDATE workspaces SET name=?,tariff=? WHERE id=?", [name, rounded(tariff, 4), workspace])
+        return json_response({"ok": True, "name": name, "tariff": rounded(tariff, 4)})
+    if path == "/api/tenants" and method == "POST":
+        require_manager(access)
+        tenant_id = required_text(body.get("id"), "Tenant ID", 2, 24).upper()
+        name = required_text(body.get("name"), "Tenant name", 2, 80)
+        floor = required_text(body.get("floor"), "Floor / unit", 2, 60)
+        color = body.get("color") or "#267765"
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", str(color)):
+            color = "#267765"
+        db.run("INSERT OR REPLACE INTO tenants (key,workspace_id,id,name,floor,color) VALUES (?,?,?,?,?,?)",
+               [f"{workspace}|{tenant_id}", workspace, tenant_id, name, floor, color])
+        return json_response({"id": tenant_id, "name": name, "floor": floor, "color": color}, 201)
+    if path == "/api/meters" and method == "POST":
+        require_manager(access)
+        meter_id = required_text(body.get("id"), "Meter ID", 3, 32).upper()
+        name = required_text(body.get("name"), "Meter name", 2, 80)
+        location = required_text(body.get("location"), "Meter location", 2, 80)
+        tenant_id = body.get("tenantId")
+        tenants = db.all("SELECT id FROM tenants WHERE workspace_id=?", [workspace])
+        threshold = float(body.get("threshold", 15.0))
+        interval = int(body.get("intervalMinutes", 60))
+        if (not any(t["id"] == tenant_id for t in tenants)
+                or not 0.1 <= threshold <= 100_000 or interval not in (15, 30, 60)):
+            raise ApiError(400, "Choose a registered tenant, a valid threshold, and a 15/30/60-minute interval.")
+        db.run("INSERT OR REPLACE INTO meters (key,workspace_id,id,name,tenant_id,location,threshold_kwh,interval_minutes) VALUES (?,?,?,?,?,?,?,?)",
+               [f"{workspace}|{meter_id}", workspace, meter_id, name, tenant_id, location, threshold, interval])
+        return json_response({"id": meter_id, "name": name, "tenant_id": tenant_id, "location": location, "threshold_kwh": threshold, "interval_minutes": interval}, 201)
     if path == "/api/imports" and method == "GET":
         require_manager(access)
         return json_response(db.all(f"SELECT {IMPORT_COLUMNS} FROM imports WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30", [workspace]))

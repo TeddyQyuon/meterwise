@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from ..core import ApiError, iso, now, parse_time, rounded
-from ..estate import BLOCKS, METERS, ensure_estate, permitted_blocks
+from ..estate import ensure_estate, permitted_blocks, workspace_blocks, workspace_estate_meters
 from .anomaly import EstateAnomalyDetector
 from .forecasting import EnergyDemandSolarForecaster
 from .schemas import (
@@ -48,13 +48,15 @@ def get_ml_forecast(
 
     workspace = access["workspace_id"]
     ensure_estate(db, workspace)
-    permitted = permitted_blocks(access["role"])
+    all_blocks = workspace_blocks(db, workspace)
+    all_meters = workspace_estate_meters(db, workspace)
+    permitted = permitted_blocks(access["role"], all_blocks, access.get("permitted_town"))
 
     if block_param != "all" and not any(b["id"] == block_param for b in permitted):
         raise ApiError(404, "Requested block is not found or not in your permitted area view.")
 
     target_blocks = [b for b in permitted if (block_param == "all" or b["id"] == block_param)]
-    target_meters = [m for m in METERS if any(b["id"] == m["block_id"] for b in target_blocks)]
+    target_meters = [m for m in all_meters if any(b["id"] == m["block_id"] for b in target_blocks)]
 
     # Fetch readings for targeted blocks
     sql = (
@@ -167,13 +169,15 @@ def get_ml_anomalies(
 
     workspace = access["workspace_id"]
     ensure_estate(db, workspace)
-    permitted = permitted_blocks(access["role"])
+    all_blocks = workspace_blocks(db, workspace)
+    all_meters = workspace_estate_meters(db, workspace)
+    permitted = permitted_blocks(access["role"], all_blocks, access.get("permitted_town"))
 
     if block_param != "all" and not any(b["id"] == block_param for b in permitted):
         raise ApiError(404, "Requested block is not found or not in your permitted area view.")
 
     target_blocks = [b for b in permitted if (block_param == "all" or b["id"] == block_param)]
-    target_meters = [m for m in METERS if any(b["id"] == m["block_id"] for b in target_blocks)]
+    target_meters = [m for m in all_meters if any(b["id"] == m["block_id"] for b in target_blocks)]
 
     if service_param != "all":
         target_meters = [m for m in target_meters if m["service"] == service_param]

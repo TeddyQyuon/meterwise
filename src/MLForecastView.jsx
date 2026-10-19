@@ -22,7 +22,9 @@ const numberFormat = (val, digits = 0) =>
 
 const money = (val) => `S$${new Intl.NumberFormat('en-SG', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val)}`;
 
-export default function MLForecastView({town, block, catalogue}) {
+export default function MLForecastView({town, block, catalogue, policy}) {
+  const tariff = policy?.tariff ?? 0.285;
+  const gridFactor = policy?.gridFactor ?? 0.402;
   const [horizon, setHorizon] = useState(24);
   const [viewMode, setViewMode] = useState('all');
   const [showConfidence, setShowConfidence] = useState(true);
@@ -100,8 +102,8 @@ export default function MLForecastView({town, block, catalogue}) {
       };
     });
 
-    const monthlyCostSaved = totalSavedKwh * 0.285 * 30;
-    const monthlyCo2Saved = totalSavedKwh * 0.402 * 30;
+    const monthlyCostSaved = totalSavedKwh * tariff * 30;
+    const monthlyCo2Saved = totalSavedKwh * gridFactor * 30;
 
     return {
       simulatedSeries: modified,
@@ -112,7 +114,7 @@ export default function MLForecastView({town, block, catalogue}) {
         peakShavedKwh,
       },
     };
-  }, [forecast, scenario]);
+  }, [forecast, scenario, tariff, gridFactor]);
 
   return (
     <div className="ml-forecast-page">
@@ -157,7 +159,7 @@ export default function MLForecastView({town, block, catalogue}) {
               <span>kWh</span>
             </div>
             <div className="metric-foot">
-              Est. Tariff: {money(forecast.summary.net_grid_kwh * 0.285)} (at S$0.285/kWh)
+              Est. Tariff: {money(forecast.summary.net_grid_kwh * tariff)} (at S${tariff}/kWh)
             </div>
           </div>
 
@@ -167,7 +169,7 @@ export default function MLForecastView({town, block, catalogue}) {
               <span className="metric-icon"><ShieldCheck size={17} /></span>
             </div>
             <div className="metric-value">
-              {numberFormat(forecast.summary.total_predicted_solar * 0.402, 1)}<span>kg</span>
+              {numberFormat(forecast.summary.total_predicted_solar * gridFactor, 1)}<span>kg</span>
             </div>
             <div className="metric-foot">
               Avoided CO₂ · Backtested R²: {forecast.metrics.r2_score} (MAPE: {forecast.metrics.demand_mape}%)
@@ -378,7 +380,7 @@ export default function MLForecastView({town, block, catalogue}) {
                 <div>
                   <strong>Tariff Cost Optimization</strong>
                   <p>
-                    Forecasted total net grid import is {numberFormat(forecast.summary.net_grid_kwh)} kWh (approx S${numberFormat(forecast.summary.net_grid_kwh * 0.285, 2)} at benchmark tariff). Smart load-shifting can yield estimated 8-12% monthly reductions.
+                    Forecasted total net grid import is {numberFormat(forecast.summary.net_grid_kwh)} kWh (approx S${numberFormat(forecast.summary.net_grid_kwh * tariff, 2)} at benchmark tariff). Smart load-shifting can yield estimated 8-12% monthly reductions.
                   </p>
                 </div>
               </div>

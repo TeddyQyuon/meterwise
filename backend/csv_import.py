@@ -74,6 +74,7 @@ def validate_csv(text, meters, existing=(), current_time=None):
     result = {"total": len(rows), "valid": 0, "duplicate": 0, "invalid": 0,
               "issues": [], "readings": [], "range": None}
     indices = [header.index(column) for column in required]
+    prev_registers = {}
     for row in rows:
         cells = row["cells"]
         meter_id, raw_time, raw_kwh = [cells[i].strip() if i < len(cells) else "" for i in indices]
@@ -88,6 +89,14 @@ def validate_csv(text, meters, existing=(), current_time=None):
             pass
         if NUMBER.fullmatch(raw_kwh):
             kwh = float(raw_kwh)
+        if meter and kwh is not None and meter.get("reading_mode") == "cumulative_register":
+            multiplier = float(meter.get("multiplier") or 1.0)
+            baseline = prev_registers.get(meter_id, meter.get("last_register_value"))
+            prev_registers[meter_id] = kwh
+            if baseline is not None:
+                kwh = round((kwh - float(baseline)) * multiplier, 4)
+        elif meter and kwh is not None and meter.get("multiplier", 1.0) != 1.0:
+            kwh = round(kwh * float(meter["multiplier"]), 4)
         message = ""
         if len(cells) != len(header):
             message = "Column count does not match the header."
