@@ -130,7 +130,7 @@ function generateFallbackForecast(blockId, town, horizonHours = 24) {
  * Generate synthetic ML anomalies matching the seeded anomalous readings
  * in the HDB estate demonstration dataset.
  */
-function generateFallbackAnomalies(town = 'all', block = 'all') {
+function generateFallbackAnomalies(town = 'all', block = 'all', reason = 'ML service unavailable') {
   const allAnomalies = [
     {
       id: 'anom-b03-pump-spike',
@@ -224,10 +224,12 @@ function generateFallbackAnomalies(town = 'all', block = 'all') {
       estimated_excess_kwh: Number(totalWasted.toFixed(1)),
     },
     detector_info: {
-      model: 'Isolation Forest (n_estimators=150, contamination=0.03) + Z-score Residuals',
+      model: 'Built-in demonstration snapshot (not live model output)',
       contamination_rate: 0.03,
       last_evaluated_at: new Date().toISOString(),
     },
+    degraded: true,
+    degradedReason: reason,
   };
 }
 
@@ -389,6 +391,7 @@ export async function fetchMLForecast(town = 'all', block = 'all', hours = 24) {
  */
 export async function fetchMLAnomalies(town = 'all', block = 'all') {
   const query = new URLSearchParams({town, block});
+  let fallbackReason = 'ML service returned an unexpected response.';
   try {
     const data = await estateApi(`/estate/ml/anomalies?${query}`);
     if (data && Array.isArray(data.anomalies)) {
@@ -438,10 +441,14 @@ export async function fetchMLAnomalies(town = 'all', block = 'all') {
           contamination_rate: 0.03,
           last_evaluated_at: new Date().toISOString(),
         },
+        degraded: false,
+        degradedReason: null,
       };
     }
-  } catch {
-    // Fallback if backend ML route is initializing
+  } catch (error) {
+    fallbackReason = error?.status
+      ? `Live ML service returned HTTP ${error.status}.`
+      : 'Live ML service could not be reached.';
   }
-  return generateFallbackAnomalies(town, block);
+  return generateFallbackAnomalies(town, block, fallbackReason);
 }

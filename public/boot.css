@@ -1,0 +1,380 @@
+/* Critical boot experience. Loaded from index.html before React so the first
+   paint is branded and informative instead of a blank page. */
+.mw-boot {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 24px;
+  background:
+    radial-gradient(1100px 520px at 12% -5%, #e2ede4 0%, transparent 60%),
+    radial-gradient(900px 480px at 94% 8%, #e8f1dd 0%, transparent 55%),
+    #f2f5f3;
+  color: #253f35;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mw-boot *,
+.mw-boot *::before,
+.mw-boot *::after {
+  box-sizing: border-box;
+}
+
+.mw-boot-inner {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: mw-boot-in 0.4s ease-out both;
+}
+
+.mw-boot-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.mw-boot-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #164b3f;
+  color: #c5ed8e;
+  box-shadow: 0 6px 18px -8px #164b3f66;
+}
+
+.mw-boot-mark svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.mw-boot-brand strong {
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  color: #17392d;
+}
+
+.mw-boot-pill {
+  margin-left: auto;
+  padding: 6px 11px;
+  border: 1px solid #dbe6d8;
+  border-radius: 999px;
+  background: #ffffffd9;
+  color: #58705f;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.mw-boot-card {
+  width: 100%;
+  padding: 30px 34px 28px;
+  border: 1px solid #dce7dd;
+  border-radius: 18px;
+  background: #fffffff2;
+  box-shadow: 0 24px 60px -34px #123e3252, 0 2px 5px #123e320a;
+  animation: mw-boot-rise 0.45s cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.mw-boot-eyebrow {
+  margin: 0 0 8px;
+  color: #6d8876;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.mw-boot-card h1 {
+  margin: 0;
+  color: #173a2e;
+  font-size: clamp(1.55rem, 3.1vw, 2.05rem);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+}
+
+.mw-boot-lead {
+  margin: 10px 0 0;
+  max-width: 560px;
+  color: #5e7366;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.mw-boot-track {
+  position: relative;
+  height: 10px;
+  margin: 22px 0 9px;
+  border-radius: 999px;
+  background: #e6eee7;
+  box-shadow: inset 0 1px 2px #123e320d;
+  overflow: hidden;
+}
+
+.mw-boot-track > span {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-width: 8%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #176748 0%, #4f9163 55%, #9acb72 100%);
+  transition: width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  overflow: hidden;
+}
+
+.mw-boot-track > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 18%, #ffffff7a 48%, transparent 78%);
+  background-size: 220% 100%;
+  animation: mw-boot-shimmer 1.5s linear infinite;
+}
+
+.mw-boot-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+  color: #647a6b;
+  font-size: 0.77rem;
+  line-height: 1.5;
+  flex-wrap: wrap;
+}
+
+.mw-boot-meta strong {
+  color: #1d5c43;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mw-boot-meta > span:nth-child(2) {
+  flex: 1;
+  min-width: 190px;
+}
+
+.mw-boot-time {
+  padding: 2px 8px;
+  border: 1px solid #e3ebe1;
+  border-radius: 999px;
+  background: #f3f7f2;
+  color: #869889;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mw-boot-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mw-boot-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #e6eee4;
+  border-radius: 9px;
+  background: #f8faf7;
+  color: #91a094;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.mw-boot-steps li i {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #e9efe7;
+  color: #7a8d7d;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.mw-boot-steps li.done {
+  border-color: #d4e6cc;
+  background: #f3f9ee;
+  color: #397050;
+}
+
+.mw-boot-steps li.done i {
+  background: #d8ebca;
+  color: #2c6a45;
+}
+
+.mw-boot-steps li.active {
+  border-color: #b9d5ae;
+  background: #f7fbf3;
+  color: #234c39;
+  font-weight: 600;
+}
+
+.mw-boot-steps li.active i {
+  background: #176748;
+  color: #fff;
+  animation: mw-boot-pulse 1.8s ease-in-out infinite;
+}
+
+.mw-boot-note {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #edf2ea;
+  color: #7d8f80;
+  font-size: 0.72rem;
+  line-height: 1.75;
+}
+
+.mw-boot-error {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.mw-boot-error span {
+  color: #7d8f80;
+  font-size: 0.77rem;
+}
+
+.mw-boot .button.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid #176748;
+  border-radius: 8px;
+  background: #176748;
+  color: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mw-boot .button.primary:hover {
+  background: #105537;
+}
+
+.mw-boot-skeleton {
+  width: 100%;
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+  opacity: 0.82;
+}
+
+.mw-boot-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mw-boot-metrics i,
+.mw-boot-chart {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid #e2eae0;
+  background: #fff;
+}
+
+.mw-boot-metrics i {
+  height: 74px;
+  border-radius: 11px;
+}
+
+.mw-boot-chart {
+  height: 128px;
+  border-radius: 12px;
+}
+
+.mw-boot-metrics i::after,
+.mw-boot-chart::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 15%, #f1f6ef 45%, transparent 75%);
+  background-size: 220% 100%;
+  animation: mw-boot-shimmer 1.6s linear infinite;
+}
+
+.mw-boot-foot {
+  margin: 18px 0 0;
+  color: #8b9b8e;
+  font-size: 0.67rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+@keyframes mw-boot-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mw-boot-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mw-boot-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+@keyframes mw-boot-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px #dcecd7; }
+  50% { box-shadow: 0 0 0 5px #eaf4e5; }
+}
+
+@media (max-width: 640px) {
+  .mw-boot { padding: 22px 14px; }
+  .mw-boot-brand { margin-bottom: 18px; }
+  .mw-boot-brand strong { font-size: 1.2rem; }
+  .mw-boot-card { padding: 24px 20px 23px; border-radius: 15px; }
+  .mw-boot-lead { font-size: 0.84rem; }
+  .mw-boot-steps { grid-template-columns: 1fr; gap: 6px; }
+  .mw-boot-steps li { padding: 8px 10px; }
+  .mw-boot-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mw-boot-metrics i { height: 58px; }
+  .mw-boot-chart { height: 96px; }
+  .mw-boot-skeleton { margin-top: 11px; }
+}
+
+@media (max-width: 420px) {
+  .mw-boot-pill { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-boot-inner,
+  .mw-boot-card,
+  .mw-boot-track > span::after,
+  .mw-boot-metrics i::after,
+  .mw-boot-chart::after,
+  .mw-boot-steps li.active i {
+    animation: none !important;
+  }
+  .mw-boot-track > span { transition: none; }
+}
