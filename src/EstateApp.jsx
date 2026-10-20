@@ -9,6 +9,7 @@ import MLAnomalyBanner from './MLAnomalyBanner';
 import MLAnomalyPanel from './MLAnomalyPanel';
 const MLForecastView=lazy(()=>import('./MLForecastView'));
 import AuthModal from './AuthModal';
+import BootScreen from './BootScreen';
 
 const navigation=[
   {id:'estate',label:'Estate overview',title:'Estate energy operations',icon:LayoutDashboard},
@@ -40,7 +41,9 @@ export default function EstateApp(){
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[busy,setBusy]=useState(true),[error,setError]=useState('');
   const [loadedKey,setLoadedKey]=useState(''),[notice,setNotice]=useState(''),[navOpen,setNavOpen]=useState(false);
   const [newIssue,setNewIssue]=useState(null),[selected,setSelected]=useState(null);
-  const [anomalies,setAnomalies]=useState([]);
+  const [anomalies,setAnomalies]=useState([]),[anomaliesLoading,setAnomaliesLoading]=useState(true);
+  const [anomaliesDegraded,setAnomaliesDegraded]=useState(false),[anomalyReason,setAnomalyReason]=useState('');
+  const [elapsed,setElapsed]=useState(0),[loadCreep,setLoadCreep]=useState(0);
   const [authInfo,setAuthInfo]=useState(null),[authOpen,setAuthOpen]=useState(false);
   const bounds=useRef(null),counter=useRef(0),rail=useRef(null),navTrigger=useRef(null);
   const filterKey=[role,town,block,period,from,to].join('|');
@@ -49,6 +52,19 @@ export default function EstateApp(){
   useEffect(()=>{const change=()=>{const current=navigation.find(item=>item.id===location.hash.slice(1));if(current)setPage(current.id);};addEventListener('hashchange',change);return()=>removeEventListener('hashchange',change);},[]);
   useEffect(()=>{document.title=`${navigation.find(item=>item.id===page)?.title} · MeterWise`;window.scrollTo(0,0);},[page]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),6000);return()=>clearTimeout(timer);},[notice]);
+  // Start the chart bundle while the estate request is still in flight.
+  useEffect(()=>{void import('./EstateChart').catch(()=>{});},[]);
+  useEffect(()=>{
+    if(data)return;
+    const timer=setInterval(()=>setElapsed(performance.now()/1000),100);
+    setElapsed(performance.now()/1000);
+    return()=>clearInterval(timer);
+  },[data]);
+  useEffect(()=>{
+    if(!role||data||error)return;
+    const timer=setInterval(()=>setLoadCreep(value=>Math.min(value+1,24)),250);
+    return()=>clearInterval(timer);
+  },[role,data,error]);
   useEffect(()=>{
     let active=true;
     (async()=>{
@@ -62,22 +78,23 @@ export default function EstateApp(){
     return()=>{active=false;};
   },[]);
   const refresh=useCallback(async()=>{
-    if(!role)return;const request=++counter.current;setBusy(true);setError('');
+    if(!role)return;const request=++counter.current;setBusy(true);setError('');setAnomaliesLoading(true);
     const query=new URLSearchParams({town,block});
     if(period==='custom'){query.set('from',from);query.set('to',to);}else if(bounds.current){query.set('to',bounds.current.to);query.set('from',addDays(bounds.current.to,1-Number(period)));}
     try{
-      const [current,anomRes]=await Promise.all([
-        estateApi(`/estate/overview?${query}`),
-        fetchMLAnomalies(town,block),
-      ]);
-      if(request===counter.current){
-        bounds.current=current.bounds;
-        setData(current);
-        setAnomalies(anomRes.anomalies);
-        setLoadedKey([role,town,block,period,from,to].join('|'));
-      }
+      // Load the dashboard first. The ML pass then reuses the workspace the
+      // overview created, instead of racing it and seeding the same readings twice.
+      const current=await estateApi(`/estate/overview?${query}`);
+      if(request!==counter.current)return;
+      bounds.current=current.bounds;
+      setData(current);
+      setLoadedKey([role,town,block,period,from,to].join('|'));
+      setBusy(false);
+      fetchMLAnomalies(town,block)
+        .then(anomRes=>{if(request===counter.current){setAnomalies(anomRes.anomalies);setAnomaliesDegraded(!!anomRes.degraded);setAnomalyReason(anomRes.degradedReason||'');setAnomaliesLoading(false);}})
+        .catch(()=>{if(request===counter.current){setAnomaliesDegraded(true);setAnomalyReason('Live ML service could not be reached.');setAnomaliesLoading(false);}});
     }
-    catch(error){if(request===counter.current)setError(error.message);}
+    catch(error){if(request===counter.current){setError(error.message);setAnomaliesLoading(false);}}
     finally{if(request===counter.current)setBusy(false);}
   },[role,town,block,period,from,to]);
   useEffect(()=>{void refresh();},[refresh]);
@@ -95,6 +112,15 @@ export default function EstateApp(){
   },[refresh,notify]);
   const ready=!!data&&!busy&&!error&&loadedKey===filterKey;
   const summary=useRef(null);summary.current=ready?data:null;
+  const slow=!data&&elapsed>8;
+  const progress=ready?100:data?86:role?Math.min(70,46+loadCreep):12;
+  const stage=slow?'Generating your first-visit readings…':!role?'Connecting to your workspace…':!data?'Generating and loading estate readings…':'Preparing charts and work orders…';
+  const detail=slow?'Still generating your one-time demo dataset. The workspace is saved, so the next visit will skip this step.':!role?'Starting an isolated demo workspace for this browser.':!data?'Generating 14 days of synthetic meter readings, then calculating the estate energy balance.':'Drawing charts and assembling your dashboard.';
+  const bootSteps=[
+    {label:'Connect workspace',state:role?'done':'active'},
+    {label:'Load estate data',state:data?'done':role?'active':'pending'},
+    {label:'Render dashboard',state:ready?'done':data?'active':'pending'},
+  ];
   useEffect(()=>{
     const context=document.modelContext;
     if(!context?.registerTool)return;const lifecycle=new AbortController();
@@ -114,20 +140,18 @@ export default function EstateApp(){
     catch(error){setError(error.message);setBusy(false);}
   }
   async function openOrder(order){try{setSelected(await estateApi(`/estate/orders/${encodeURIComponent(order.id)}`));}catch(error){notify(error.message);}}
-  if(!data&&!role&&!busy)return <div className="boot"><TriangleAlert size={32}/><h1>Workspace unavailable</h1><p>{error}</p><button className="button primary" onClick={()=>location.reload()}>Try again</button></div>;
-  if(!data&&!error)return <div className="boot"><div className="brand-mark"><Zap size={28}/></div><h1>MeterWise</h1><LoaderCircle size={24} className="spin"/><p>Preparing your Singapore estate workspace…</p></div>;
-  if(!data)return <div className="boot"><h1>Estate data unavailable</h1><p>{error}</p><button className="button primary" onClick={()=>void refresh()}>Try again</button></div>;
+  if(!data)return <BootScreen progress={progress} stage={stage} detail={detail} elapsed={elapsed} steps={bootSteps} error={error} onRetry={()=>location.reload()}/>;
   const current=navigation.find(item=>item.id===page),reportQuery=new URLSearchParams({from:data.from,to:data.to,town,block});
-  return <div className="app-shell estate-app"><a className="skip-link" href="#main-content">Skip to estate data</a>
+  return <div className="app-shell estate-app">{busy&&<div className="refresh-rail" role="progressbar" aria-label="Updating estate data"><span/></div>}<a className="skip-link" href="#main-content">Skip to estate data</a>
     {navOpen&&<button className="nav-overlay" aria-label="Close navigation" onClick={()=>setNavOpen(false)}/>}
     <aside ref={rail} id="estate-navigation" className={`sidebar ${navOpen?'is-open':''}`} role={navOpen?'dialog':undefined} aria-modal={navOpen||undefined} aria-label="Estate navigation">
       <button className="icon-button nav-close" aria-label="Close menu" onClick={()=>setNavOpen(false)}><X size={20}/></button>
       <a href="#estate" className="brand" onClick={()=>navigate('estate')}><span className="brand-mark"><Zap size={21} fill="currentColor"/></span>MeterWise</a>
       <div className="workspace-label">SINGAPORE ESTATES</div><div className="workspace"><span className="workspace-icon"><Building2 size={19}/></span><div><strong>Common services</strong><span>Public housing energy pilot</span></div></div>
-      <nav aria-label="Estate main navigation">{navigation.filter(item=>role==='manager'||item.id!=='estate-imports').map(item=><button key={item.id} className={`nav-item ${page===item.id?'active':''}`} onClick={()=>navigate(item.id)} aria-current={page===item.id?'page':undefined}><item.icon size={19}/><span>{item.label}</span>{item.id==='estate-orders'&&data.metrics.openOrders>0&&<span className="nav-count">{data.metrics.openOrders}</span>}{item.id==='estate-forecast'&&anomalies.length>0&&<span className="nav-count ml-alert-count" title={`${anomalies.length} anomalies detected`}>{anomalies.length}</span>}</button>)}</nav>
+      <nav aria-label="Estate main navigation">{navigation.filter(item=>role==='manager'||item.id!=='estate-imports').map(item=><button key={item.id} className={`nav-item ${page===item.id?'active':''}`} onClick={()=>navigate(item.id)} aria-current={page===item.id?'page':undefined}><item.icon size={19}/><span>{item.label}</span>{item.id==='estate-orders'&&data.metrics.openOrders>0&&<span className="nav-count">{data.metrics.openOrders}</span>}{item.id==='estate-forecast'&&!anomaliesLoading&&anomalies.length>0&&<span className="nav-count ml-alert-count" title={anomaliesDegraded?`${anomalies.length} demonstration anomalies (live ML unavailable)`:`${anomalies.length} anomalies detected`}>{anomalies.length}</span>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="demo-card"><Leaf size={20}/><strong>Better data. Better estates.</strong><p>Independent pilot inspired by HDB’s Green Towns Programme.</p><a href="#overview">Open the building demo <ArrowUpRight size={14}/></a></div><div className="profile"><span className="avatar">{role==='manager'?'EM':'AV'}</span><div><strong>{role==='manager'?'Estate manager':'Area viewer'}</strong><span>{role==='manager'?'Demo operations workspace':'Ang Mo Kio · read only'}</span></div></div></div>
     </aside>
-    <main className="main" id="main-content" inert={navOpen||undefined}>
+    <main className="main" id="main-content" aria-busy={busy} inert={navOpen||undefined}>
       <header className="topbar"><div className="breadcrumb"><button ref={navTrigger} className="icon-button mobile-menu" aria-label="Open navigation" aria-controls="estate-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/></button><span>Estate operations</span><span className="breadcrumb-divider">/</span><strong>{current.label}</strong></div><div className="top-actions">{!authInfo?.isDemo&&authInfo?.orgName?<Pill tone="green">{authInfo.orgName}</Pill>:<Pill tone="demo">Independent pilot</Pill>}<button className="role-button" onClick={()=>setAuthOpen(true)}><Building2 size={16}/><span>{authInfo?.orgName?authInfo.orgName:'Client Sign In'}</span></button><button className="role-button" disabled={busy} onClick={()=>void switchRole()}><Eye size={16}/><span>{role==='manager'?'Preview area viewer':'Back to manager'}</span></button></div></header>
       <div className="page-content">
         <div className="estate-provenance"><span><ShieldCheck size={16}/><strong>Real HDB inventory</strong><span className="provenance-divider">/</span> Simulated meters & maintenance</span><button className="text-button" onClick={()=>navigate('estate-sources')}>About this pilot <ArrowUpRight size={14}/></button></div>
@@ -136,7 +160,7 @@ export default function EstateApp(){
         {error&&<div className="estate-notice error" role="alert"><TriangleAlert size={19}/><span>{error} Displayed figures retain the last valid selection. Exports are disabled.</span></div>}
         {busy&&<div className="data-status" role="status"><LoaderCircle size={16} className="spin"/> Updating your selection…</div>}
         {!data.metrics.complete&&page!=='estate-sources'&&<div className="estate-notice"><TriangleAlert size={20}/><div><strong>{data.metrics.expected-data.metrics.received} missing hourly readings</strong><span>Grid import, export, cost, carbon and comparisons are withheld until the selected data is complete.</span></div>{role==='manager'&&<button className="button secondary" onClick={()=>navigate('estate-imports')}>Repair data <ArrowRight size={16}/></button>}</div>}
-        {page==='estate'&&<EstateOverviewPage data={data} anomalies={anomalies} onBlocks={()=>navigate('estate-blocks')} onIssue={issue=>setNewIssue(issue)} onOrders={()=>navigate('estate-orders')} onForecast={()=>navigate('estate-forecast')} canWrite={role==='manager'&&ready}/>}
+        {page==='estate'&&<EstateOverviewPage data={data} anomalies={anomalies} anomaliesLoading={anomaliesLoading} anomaliesDegraded={anomaliesDegraded} anomalyReason={anomalyReason} onBlocks={()=>navigate('estate-blocks')} onIssue={issue=>setNewIssue(issue)} onOrders={()=>navigate('estate-orders')} onForecast={()=>navigate('estate-forecast')} canWrite={role==='manager'&&ready}/>}
         {page==='estate-forecast'&&<Suspense fallback={<div className="data-status" role="status"><LoaderCircle size={18} className="spin"/> Loading ML forecast…</div>}><MLForecastView town={town} block={block} catalogue={data.catalogue} policy={data.policy}/></Suspense>}
         {page==='estate-blocks'&&<BlocksPage data={data} onChoose={id=>{setBlock(id);navigate('estate');}} canWrite={role==='manager'&&ready} onRefresh={refresh}/>}
         {page==='estate-imports'&&role==='manager'&&<EstateImports onSaved={async()=>{notify('Estate readings saved. Recalculating the selected period.');await refresh();}}/>}
@@ -153,15 +177,15 @@ export default function EstateApp(){
   </div>;
 }
 
-function EstateOverviewPage({data,anomalies,onBlocks,onIssue,onOrders,onForecast,canWrite}){
+function EstateOverviewPage({data,anomalies,anomaliesLoading,anomaliesDegraded,anomalyReason,onBlocks,onIssue,onOrders,onForecast,canWrite}){
   return <><div className="metrics estate-metrics"><div className="metric"><div className="metric-top">Recorded common load<span className="metric-icon"><Zap size={17}/></span></div><div className="metric-value">{number(data.metrics.load)}<span>kWh</span></div><div className="metric-foot">{data.metrics.change===null?'Comparison requires complete periods':`${data.metrics.change>0?'+':''}${data.metrics.change}% vs previous equal-length period`} · simulated</div></div><div className="metric"><div className="metric-top">Rooftop solar generation<span className="metric-icon"><Sun size={17}/></span></div><div className="metric-value">{number(data.metrics.solar)}<span>kWh</span></div><div className="metric-foot">Recorded generation · simulated PV assets</div></div><div className="metric"><div className="metric-top">Derived grid import<span className="metric-icon"><Activity size={17}/></span></div><div className={`metric-value ${data.metrics.grid===null?'awaiting-value':''}`}>{data.metrics.grid===null?'Awaiting data':number(data.metrics.grid)}{data.metrics.grid!==null&&<span>kWh</span>}</div><div className="metric-foot">Matched by block and hour · export counted separately</div></div><div className="metric"><div className="metric-top">Meter data coverage<span className="metric-icon"><ShieldCheck size={17}/></span></div><div className="metric-value">{number(data.metrics.coverage,2)}<span>%</span></div><div className="metric-foot">{number(data.metrics.received)} / {number(data.metrics.expected)} hourly intervals</div></div></div>
     <div className="estate-context"><span><Building2 size={17}/><strong>{data.blocks.length} blocks</strong> · {data.metrics.units} public-record dwelling units</span><span><ClipboardCheck size={17}/><strong>{data.metrics.openOrders} open work orders</strong>{data.metrics.overdueOrders>0&&` · ${data.metrics.overdueOrders} overdue`}</span><span><Leaf size={17}/>Grid CO₂ estimate <strong>{data.metrics.co2Kg===null?'Withheld':`${number(data.metrics.co2Kg)} kg`}</strong></span><button type="button" className="text-button" onClick={onForecast}><Sparkles size={15}/>Predictive ML forecast <ArrowUpRight size={13}/></button></div>
-    <MLAnomalyBanner anomalies={anomalies} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onExploreForecast={onForecast} onViewAll={()=>{document.getElementById('ml-anomaly-section')?.scrollIntoView({behavior:'smooth'});}}/>
+    <MLAnomalyBanner anomalies={anomalies} loading={anomaliesLoading} degraded={anomaliesDegraded} degradedReason={anomalyReason} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onExploreForecast={onForecast} onViewAll={()=>{document.getElementById('ml-anomaly-section')?.scrollIntoView({behavior:'smooth'});}}/>
     <div className="estate-grid"><Panel title="Energy balance over time" subtitle="Simulated common load and solar; grid use requires complete intervals." action={<Pill>kWh / day</Pill>}><div className="estate-chart-legend"><span><i className="load-dot"/>Common load</span><span><i className="solar-dot"/>Solar generation</span><span><i className="grid-dot"/>Grid import</span></div><div className="estate-chart" role="img" aria-label="Daily common load, solar generation and derived grid import. Exact values are in the chart data table."><Suspense fallback={<p role="status">Loading chart… Exact values are available in the data table below.</p>}><EstateChart data={data.chart}/></Suspense></div><details className="chart-data"><summary>View chart data</summary><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>SGT date</th><th>Load kWh</th><th>Solar kWh</th><th>Grid kWh</th></tr></thead><tbody>{data.chart.map(point=><tr key={point.date}><td>{point.date}</td><td>{point.load}</td><td>{point.solar}</td><td>{point.grid??'Withheld'}</td></tr>)}</tbody></table></div></details></Panel>
     <Panel title="Common services" subtitle="Recorded energy by service" className="estate-services">{data.services.filter(item=>item.service!=='solar').map((item,index)=><div className="estate-service" key={item.service}><span className={`service-mark service-${index}`}>{item.service==='pumps'?<Activity size={17}/>:<Zap size={17}/>}</span><div><strong>{serviceLabels[item.service]}</strong><div className="service-track"><span style={{width:`${Math.max(2,item.kwh/data.metrics.load*100)}%`}}/></div></div><strong>{number(item.kwh)}<small>kWh</small></strong></div>)}<div className="estate-service-foot"><Sun size={22}/><div><strong>{data.metrics.selfConsumed===null?'Solar split withheld':`${number(data.metrics.selfConsumed)} kWh solar used on site`}</strong><p>{data.metrics.exported===null?'Restore missing readings to split self-consumption and exports.':`${number(data.metrics.exported)} kWh exported in matching intervals. Export revenue is excluded.`}</p></div></div></Panel></div>
     <div className="estate-grid estate-bottom-grid"><Panel title="Blocks at a glance" subtitle="Compare common-service energy per dwelling unit" action={<button className="text-button" onClick={onBlocks}>All blocks <ArrowUpRight size={14}/></button>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block</th><th>Common load</th><th>kWh / unit</th><th>Coverage</th></tr></thead><tbody>{data.blocks.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.town} · {block.street}</small></td><td>{number(block.load)} kWh</td><td>{block.kwhPerUnit===null?'Withheld':number(block.kwhPerUnit,2)}</td><td><Pill tone={block.complete?'green':'amber'}>{block.coverage}%</Pill></td></tr>)}</tbody></table></div></Panel>
     <Panel title="Needs an inspection" subtitle="Rules identify exceptions; they do not diagnose faults." action={<Pill tone="amber">{data.issues.length}</Pill>}><div className="estate-issues">{data.issues.length?data.issues.slice(0,5).map(issue=><div className="estate-issue" key={issue.key}><span className={`alert-icon ${issue.priority==='high'?'high':'medium'}`}>{issue.kind==='missing'?<Activity size={17}/>:<TriangleAlert size={17}/>}</span><div><strong>{issue.title}</strong><small>{issue.meter_id} · {data.catalogue.find(block=>block.id===issue.block_id)?.town}</small></div>{canWrite&&<button className="text-button" aria-label={`Create work order for ${issue.meter_id} ${issue.kind}`} onClick={()=>onIssue(issue)}>Inspect <ChevronRight size={15}/></button>}</div>):<div className="estate-empty"><CheckCircle2 size={25}/><p>No exceptions in this selection.</p></div>}</div><div className="panel-note"><ClipboardCheck size={16}/><button className="text-button" onClick={onOrders}>Open the maintenance queue</button></div></Panel></div>
-    <div id="ml-anomaly-section"><MLAnomalyPanel anomalies={anomalies} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders} policy={data.policy}/></div></>;
+    <div id="ml-anomaly-section"><MLAnomalyPanel anomalies={anomalies} loading={anomaliesLoading} degraded={anomaliesDegraded} degradedReason={anomalyReason} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders} policy={data.policy}/></div></>;
 }
 
 function BlocksPage({data,onChoose,canWrite,onRefresh}){

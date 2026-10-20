@@ -9,12 +9,17 @@ import {
   Info,
   Clock,
   Sparkles,
+  LoaderCircle,
+  WifiOff,
 } from 'lucide-react';
 
 const severityOrder = {critical: 0, high: 1, medium: 2, low: 3};
 
 export default function MLAnomalyPanel({
   anomalies,
+  loading = false,
+  degraded = false,
+  degradedReason = '',
   canWrite,
   onDispatchOrder,
   onOpenOrders,
@@ -24,6 +29,34 @@ export default function MLAnomalyPanel({
   const gridFactor = policy?.gridFactor ?? 0.402;
   const [filter, setFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
+
+  if (loading) {
+    return (
+      <section className="panel ml-anomaly-panel" aria-busy="true" aria-live="polite">
+        <div className="panel-heading">
+          <div>
+            <h2>
+              Anomaly Detection
+              <span className="ml-tag"><LoaderCircle size={13} className="spin" /> ML scanning</span>
+            </h2>
+            <p>Scoring recent meter intervals against expected estate behaviour.</p>
+          </div>
+        </div>
+        <div className="ml-anomaly-list ml-anomaly-skeleton">
+          {[0, 1, 2].map(row => (
+            <div className="ml-skeleton-row" key={row}>
+              <span className="ml-skeleton-icon" />
+              <div className="ml-skeleton-copy">
+                <span className="ml-skeleton-line w55" />
+                <span className="ml-skeleton-line w85" />
+                <span className="ml-skeleton-line w40" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   const filtered = anomalies
     .filter(a => filter === 'all' || a.severity === filter)
@@ -38,10 +71,16 @@ export default function MLAnomalyPanel({
       <div className="panel-heading">
         <div>
           <h2>
-            Intelligent Anomaly Detection
-            <span className="ml-tag"><Sparkles size={13} /> ML Isolation Forest</span>
+            {degraded ? 'Anomaly Detection' : 'Intelligent Anomaly Detection'}
+            {degraded
+              ? <span className="ml-tag warning"><WifiOff size={13} /> Fallback demo data</span>
+              : <span className="ml-tag"><Sparkles size={13} /> ML Isolation Forest</span>}
           </h2>
-          <p>Statistical residual and unsupervised anomaly model with diagnostic root cause hypotheses</p>
+          <p>
+            {degraded
+              ? 'Built-in demonstration cases, shown because the live model is unavailable'
+              : 'Statistical residual and unsupervised anomaly model with diagnostic root cause hypotheses'}
+          </p>
           
           {/* Service filter chips */}
           <div className="ml-service-filters">
@@ -87,6 +126,19 @@ export default function MLAnomalyPanel({
           </div>
         </div>
       </div>
+
+      {degraded && (
+        <div className="ml-degraded-panel" role="status">
+          <WifiOff size={18} />
+          <div>
+            <strong>Live ML service unavailable</strong>
+            <span>
+              {degradedReason ? `${degradedReason} ` : ''}
+              The cases below are a built-in demonstration checklist, not fresh detections from your latest readings.
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="ml-anomaly-list">
         {filtered.length ? (
@@ -178,9 +230,13 @@ export default function MLAnomalyPanel({
           })
         ) : (
           <div className="estate-empty">
-            <CheckCircle2 size={26} className="text-green" />
+            {degraded ? <WifiOff size={26} className="text-amber" /> : <CheckCircle2 size={26} className="text-green" />}
             <h3>No anomalies found</h3>
-            <p>Isolation Forest model detected no anomalous consumption for this filter.</p>
+            <p>
+              {degraded
+                ? 'No built-in demonstration cases match this filter. Live ML results will appear when the service is available.'
+                : 'Isolation Forest model detected no anomalous consumption for this filter.'}
+            </p>
           </div>
         )}
       </div>
@@ -188,7 +244,9 @@ export default function MLAnomalyPanel({
       <div className="panel-note">
         <Info size={15} />
         <span>
-          ML anomaly engine uses Scikit-Learn Isolation Forest ($n=150$) and robust residual Z-scores. Detected anomalies can be converted into tracked maintenance work orders with full audit history.
+          {degraded
+            ? 'Fallback mode: the live anomaly model did not respond, so MeterWise is showing its seeded demonstration cases. Treat these as examples, not current findings.'
+            : 'ML anomaly engine uses Scikit-Learn Isolation Forest ($n=150$) and robust residual Z-scores. Detected anomalies can be converted into tracked maintenance work orders with full audit history.'}
         </span>
         <button type="button" className="text-button" onClick={onOpenOrders}>
           Open maintenance queue <ChevronRight size={14} />

@@ -1,2 +1,60 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="theme-color" content="#123b34"/><meta name="description" content="MeterWise helps building managers track electricity consumption, validate meter data, and investigate unusual usage."/><link rel="icon" type="image/svg+xml" href="/favicon.svg"/><title>MeterWise · Building Energy Analytics</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#123b34" />
+    <meta name="description" content="MeterWise helps building managers track electricity consumption, validate meter data, and investigate unusual usage." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/boot.css" />
+    <title>MeterWise · Building Energy Analytics</title>
+  </head>
+  <body>
+    <div id="root">
+      <div class="mw-boot" aria-busy="true">
+        <div class="mw-boot-inner">
+          <header class="mw-boot-brand">
+            <span class="mw-boot-mark">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M13.2 1.8 4.6 13.3a.7.7 0 0 0 .56 1.12h5.2l-1.1 7.7a.7.7 0 0 0 1.23.53l8.6-11.5a.7.7 0 0 0-.56-1.12h-5.2l1.1-7.7a.7.7 0 0 0-1.23-.53Z" />
+              </svg>
+            </span>
+            <strong>MeterWise</strong>
+            <span class="mw-boot-pill">Independent pilot</span>
+          </header>
+
+          <section class="mw-boot-card">
+            <p class="mw-boot-eyebrow">SINGAPORE ESTATES</p>
+            <h1>Preparing your workspace</h1>
+            <p class="mw-boot-lead">Starting an isolated demo workspace for this browser.</p>
+
+            <div class="mw-boot-track" role="progressbar" aria-label="Workspace loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" aria-valuetext="10% — Connecting to your workspace…">
+              <span style="width: 10%"></span>
+            </div>
+            <div class="mw-boot-meta">
+              <strong>10%</strong>
+              <span role="status" aria-live="polite">Connecting to your workspace…</span>
+              <span class="mw-boot-time" aria-hidden="true">0.0s</span>
+            </div>
+
+            <ol class="mw-boot-steps">
+              <li class="active"><i aria-hidden="true">1</i><span>Connect workspace</span></li>
+              <li><i aria-hidden="true">2</i><span>Load estate data</span></li>
+              <li><i aria-hidden="true">3</i><span>Render dashboard</span></li>
+            </ol>
+
+            <p class="mw-boot-note">First visit only: MeterWise generates about 8,000 synthetic meter readings for your own workspace. Later visits load much faster.</p>
+          </section>
+
+          <div class="mw-boot-skeleton" aria-hidden="true">
+            <div class="mw-boot-metrics"><i></i><i></i><i></i><i></i></div>
+            <div class="mw-boot-chart"></div>
+          </div>
+
+          <p class="mw-boot-foot">Real HDB building inventory · Simulated meter and maintenance data · SGT</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

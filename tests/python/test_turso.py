@@ -95,10 +95,19 @@ def test_http_migrations_are_idempotent_and_workflows_use_real_adapter(remote):
         assert browser.post("/api/estate/imports/commit", json={"csv": sample, "fileName": "turso.csv"}).status_code == 201
         assert browser.get("/api/estate/overview").json()["metrics"]["coverage"] == 100
         assert browser.get("/api/dashboard").json()["metrics"]["missing"] == 8
-    # Large seed batches remain one atomic request rather than one network call per interval.
+    # Large seeds stay in one atomic request instead of one network call per
+    # interval, and wide multi-row INSERTs keep the statement count low.
+    def estate_inserts(call):
+        return [step for step in call["requests"][0]["batch"]["steps"]
+                if "INSERT OR IGNORE INTO estate_readings" in step.get("stmt", {}).get("sql", "")]
+
     seed_batches = [call for call in transport.calls if call["requests"][0]["type"] == "batch"
-                    and len(call["requests"][0]["batch"]["steps"]) > 400]
+                    and len(estate_inserts(call)) > 50]
     assert len(seed_batches) == 1
+    reading_inserts = estate_inserts(seed_batches[0])
+    assert len(reading_inserts) < 100
+    missing = initial["metrics"]["expected"] - initial["metrics"]["received"]
+    assert sum(step["stmt"]["sql"].count("(?,?,?,?,?)") for step in reading_inserts) == initial["metrics"]["expected"] * 2 - missing
 
 
 def test_http_mutations_are_never_retried_on_timeout():

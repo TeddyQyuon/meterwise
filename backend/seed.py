@@ -22,10 +22,12 @@ METERS = [dict(id=f"MW-{i+1:03}", name=name, tenant_id=tenant, location=location
 
 
 def reading_statements(rows, workspace, table):
-    # Keep each statement below 100 SQLite bind parameters.
+    # Batch 100 rows per INSERT (500 bind parameters, below SQLite's legacy
+    # 999-parameter ceiling). Fewer statements means the first-visit seed batch
+    # is much cheaper to serialise, send and prepare against remote Turso.
     statements = []
-    for i in range(0, len(rows), 16):
-        chunk = rows[i:i + 16]
+    for i in range(0, len(rows), 100):
+        chunk = rows[i:i + 100]
         statements.append((f"INSERT OR IGNORE INTO {table} "
                            "(id,workspace_id,meter_id,recorded_at,consumption_kwh) VALUES "
                            + ",".join("(?,?,?,?,?)" for _ in chunk),
