@@ -53,7 +53,13 @@ def test_api_matches_the_original_typescript_contract(client, monkeypatch):
     session = client.post("/api/session", json={"role": "manager"}).json()
     assert session == fixture["session"]
     assert client.get("/api/dashboard").json() == fixture["building"]
-    assert client.get("/api/estate/overview").json() == fixture["estate"]
+    current_estate = client.get("/api/estate/overview").json()
+    # The 2.1 API adds teams and asset metadata; retain exact 2.0 field parity.
+    current_estate.pop("teams", None)
+    for meter in current_estate["meters"]:
+        assert meter.pop("reading_mode") == "interval_kwh"
+        assert meter.pop("multiplier") == 1.0
+    assert current_estate == fixture["estate"]
 
 
 def test_csv_quotes_bom_multiline_duplicates_and_formula_protection():

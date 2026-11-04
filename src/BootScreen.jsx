@@ -5,15 +5,12 @@ const Bolt = () => (
 );
 
 export default function BootScreen({
-  progress = 0,
   stage = 'Connecting to your workspace…',
   detail = 'Starting an isolated demo workspace for this browser.',
   elapsed = 0,
-  steps = [],
   error = '',
   onRetry,
 }) {
-  const percent = Math.max(0, Math.min(100, Math.round(progress)));
 
   return (
     <div className="mw-boot" aria-busy={!error}>
@@ -42,27 +39,14 @@ export default function BootScreen({
                 className="mw-boot-track"
                 role="progressbar"
                 aria-label="Workspace loading progress"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={percent}
-                aria-valuetext={`${percent}% — ${stage}`}
+                aria-valuetext={stage}
               >
-                <span style={{ width: `${Math.max(8, percent)}%` }} />
+                <span className="mw-boot-indeterminate" />
               </div>
               <div className="mw-boot-meta">
-                <strong>{percent}%</strong>
                 <span role="status" aria-live="polite">{stage}</span>
                 <span className="mw-boot-time" aria-hidden="true">{elapsed.toFixed(1)}s</span>
               </div>
-
-              <ol className="mw-boot-steps">
-                {steps.map((step, index) => (
-                  <li key={step.label} className={step.state}>
-                    <i aria-hidden="true">{step.state === 'done' ? '✓' : index + 1}</i>
-                    <span>{step.label}</span>
-                  </li>
-                ))}
-              </ol>
 
               <p className="mw-boot-note">
                 First visit only: MeterWise generates about 8,000 synthetic meter readings for your own workspace.

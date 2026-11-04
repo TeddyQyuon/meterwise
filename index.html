@@ -7,7 +7,7 @@
     <meta name="description" content="MeterWise helps building managers track electricity consumption, validate meter data, and investigate unusual usage." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/boot.css" />
-    <title>MeterWise · Building Energy Analytics</title>
+    <title>MeterWise · Estate Energy Operations</title>
   </head>
   <body>
     <div id="root">
@@ -28,20 +28,13 @@
             <h1>Preparing your workspace</h1>
             <p class="mw-boot-lead">Starting an isolated demo workspace for this browser.</p>
 
-            <div class="mw-boot-track" role="progressbar" aria-label="Workspace loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" aria-valuetext="10% — Connecting to your workspace…">
-              <span style="width: 10%"></span>
+            <div class="mw-boot-track" role="progressbar" aria-label="Workspace loading progress" aria-valuetext="Connecting to your workspace…">
+              <span class="mw-boot-indeterminate"></span>
             </div>
             <div class="mw-boot-meta">
-              <strong>10%</strong>
               <span role="status" aria-live="polite">Connecting to your workspace…</span>
               <span class="mw-boot-time" aria-hidden="true">0.0s</span>
             </div>
-
-            <ol class="mw-boot-steps">
-              <li class="active"><i aria-hidden="true">1</i><span>Connect workspace</span></li>
-              <li><i aria-hidden="true">2</i><span>Load estate data</span></li>
-              <li><i aria-hidden="true">3</i><span>Render dashboard</span></li>
-            </ol>
 
             <p class="mw-boot-note">First visit only: MeterWise generates about 8,000 synthetic meter readings for your own workspace. Later visits load much faster.</p>
           </section>
