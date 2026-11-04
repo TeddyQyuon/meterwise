@@ -42,3 +42,9 @@ Forecast regressors use one worker rather than every detected CPU for this small
 - LightGBM: avoid excessive threads for small data — https://lightgbm.readthedocs.io/en/latest/Parameters.html
 
 No field Core Web Vitals or Lighthouse score is claimed. Production first-visit speed still depends on database latency and workspace provisioning. Live ML availability must be checked independently after release; the UI retains an explicit demonstration fallback.
+
+## Hosted review build
+
+Vercel preview deployment `dpl_E7tZRZKEW5RGkq1sAiE2KrT24UWD` reached READY for implementation commit `7791d6a5c34574415cdd69896f8ffb4191a8f75d`.
+
+Verified https://meterwise-4pppwy88u-qyuon1.vercel.app/ in the cloud browser: bootstrap completed, the dashboard and chart rendered, and the live ML service remained unavailable with explicitly labelled demonstration insights. `hosted-preview.png` captures the hosted result. Production remains on its previous commit; the update is available in draft PR https://github.com/TeddyQyuon/meterwise/pull/3 pending approval to merge and deploy.
