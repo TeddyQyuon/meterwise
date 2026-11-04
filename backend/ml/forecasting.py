@@ -43,14 +43,15 @@ def build_regressor(model_type: str = "lightgbm", random_state: int = 42):
             min_child_samples=5,
             random_state=random_state,
             verbose=-1,
-            n_jobs=-1,
+            force_col_wise=True,
+            n_jobs=1,
         )
     elif model_type == "random_forest":
         return RandomForestRegressor(
             n_estimators=100,
             max_depth=8,
             random_state=random_state,
-            n_jobs=-1,
+            n_jobs=1,
         )
     else:
         return HistGradientBoostingRegressor(

@@ -1,39 +1,33 @@
 import {lazy,Suspense,useState,useEffect,useCallback,useRef} from 'react';
-import {Zap,Building2,LayoutDashboard,UploadCloud,ClipboardCheck,FileBarChart2,BookOpen,ArrowUpRight,ArrowRight,Download,RefreshCw,Menu,X,Sun,Leaf,Activity,TriangleAlert,CheckCircle2,LoaderCircle,Eye,Plus,Search,Info,ShieldCheck,ChevronRight,Sparkles,ExternalLink} from 'lucide-react';
+import {Zap,Building2,LayoutDashboard,UploadCloud,ClipboardCheck,FileBarChart2,BookOpen,ArrowUpRight,ArrowRight,Download,RefreshCw,Menu,X,Sun,Leaf,Activity,TriangleAlert,CheckCircle2,LoaderCircle,Eye,Plus,Search,Info,ShieldCheck,ChevronRight,Sparkles,ExternalLink,ChevronDown,Compass} from 'lucide-react';
 const EstateChart=lazy(()=>import('./EstateChart'));
 import {serviceLabels} from '../shared/estate';
 import {addDays,dayStart} from '../shared/analytics';
-import {estateApi,postEstate,RequestError} from './estate-api';
+import {estateApi,postEstate,bootstrapEstate} from './estate-api';
 import {fetchMLAnomalies} from './ml-api';
-import MLAnomalyBanner from './MLAnomalyBanner';
-import MLAnomalyPanel from './MLAnomalyPanel';
+const MLAnomalyPanel=lazy(()=>import('./MLAnomalyPanel'));
 const MLForecastView=lazy(()=>import('./MLForecastView'));
-import AuthModal from './AuthModal';
+const AuthModal=lazy(()=>import('./AuthModal'));
 import BootScreen from './BootScreen';
+import {number,date,Pill,Panel} from './estate-ui';
+const BlocksPage=lazy(()=>import('./EstatePages').then(module=>({default:module.BlocksPage})));
+const EstateImports=lazy(()=>import('./EstatePages').then(module=>({default:module.EstateImports})));
+const OrdersPage=lazy(()=>import('./EstatePages').then(module=>({default:module.OrdersPage})));
+const NewOrderDialog=lazy(()=>import('./EstatePages').then(module=>({default:module.NewOrderDialog})));
+const OrderDialog=lazy(()=>import('./EstatePages').then(module=>({default:module.OrderDialog})));
+const ReportsPage=lazy(()=>import('./EstatePages').then(module=>({default:module.ReportsPage})));
+const SourcesPage=lazy(()=>import('./EstatePages').then(module=>({default:module.SourcesPage})));
+
 
 const navigation=[
-  {id:'estate',label:'Estate overview',title:'Estate energy operations',icon:LayoutDashboard},
-  {id:'estate-forecast',label:'ML Forecast',title:'Predictive Energy & Solar Forecast',icon:Sparkles},
-  {id:'estate-blocks',label:'Blocks & assets',title:'Every block, in context',icon:Building2},
-  {id:'estate-imports',label:'Data quality',title:'Trust the readings first',icon:UploadCloud},
-  {id:'estate-orders',label:'Work orders',title:'From exception to resolution',icon:ClipboardCheck},
-  {id:'estate-reports',label:'Reports & scenarios',title:'Turn evidence into a decision',icon:FileBarChart2},
-  {id:'estate-sources',label:'Sources & methods',title:'Know what is behind every number',icon:BookOpen},
+  {id:'estate',label:'Estate overview',title:'Estate overview',icon:LayoutDashboard},
+  {id:'estate-forecast',label:'Forecasts',title:'Energy forecasts & insights',icon:Sparkles},
+  {id:'estate-blocks',label:'Blocks & assets',title:'Blocks & assets',icon:Building2},
+  {id:'estate-imports',label:'Data quality',title:'Data quality',icon:UploadCloud},
+  {id:'estate-orders',label:'Work orders',title:'Work orders',icon:ClipboardCheck},
+  {id:'estate-reports',label:'Reports & scenarios',title:'Reports & scenarios',icon:FileBarChart2},
+  {id:'estate-sources',label:'Sources & methods',title:'Sources & methods',icon:BookOpen},
 ];
-const number=(value,digits=0)=>new Intl.NumberFormat('en-SG',{maximumFractionDigits:digits}).format(value);
-const money=(value)=>`S$${number(value,2)}`;
-const date=(value)=>new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Singapore'}).format(new Date(value.length===10?dayStart(value):value));
-const stamp=(value)=>new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:'Asia/Singapore'}).format(new Date(value));
-const statusLabel={open:'Open',in_progress:'In progress',completed:'Awaiting verification',verified:'Verified'};
-const nextStatus={open:['in_progress'],in_progress:['completed'],completed:['verified','in_progress'],verified:['open']};
-function Pill({children,tone='neutral'}){return <span className={`badge ${tone}`}>{children}</span>;}
-function Panel({title,subtitle,action,children,className=''}){return <section className={`panel ${className}`}><div className="panel-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>;}
-function Dialog({title,children,onClose}){
-  const ref=useRef(null);
-  useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>{if(dialog?.open)dialog.close();};},[]);
-  return <dialog ref={ref} className="modal estate-dialog" aria-label={title} onCancel={event=>{event.preventDefault();onClose();}}><div className="modal-head"><h2>{title}</h2><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={20}/></button></div>{children}</dialog>;
-}
-
 export default function EstateApp(){
   const [page,setPage]=useState((navigation.find(item=>item.id===location.hash.slice(1))?.id)??'estate');
   const [role,setRole]=useState(null),[data,setData]=useState(null);
@@ -43,55 +37,57 @@ export default function EstateApp(){
   const [newIssue,setNewIssue]=useState(null),[selected,setSelected]=useState(null);
   const [anomalies,setAnomalies]=useState([]),[anomaliesLoading,setAnomaliesLoading]=useState(true);
   const [anomaliesDegraded,setAnomaliesDegraded]=useState(false),[anomalyReason,setAnomalyReason]=useState('');
-  const [elapsed,setElapsed]=useState(0),[loadCreep,setLoadCreep]=useState(0);
+  const [elapsed,setElapsed]=useState(0);
+  const [guideOpen,setGuideOpen]=useState(false);
+  const bootData=useRef(null),startedAt=useRef(performance.now());
   const [authInfo,setAuthInfo]=useState(null),[authOpen,setAuthOpen]=useState(false);
   const bounds=useRef(null),counter=useRef(0),rail=useRef(null),navTrigger=useRef(null);
+  const canManage=role==='manager'||role==='org_admin';
   const filterKey=[role,town,block,period,from,to].join('|');
   const notify=useCallback((message)=>setNotice(message),[]);
   const navigate=useCallback((next)=>{location.hash=next;setPage(next);setNavOpen(false);},[]);
   useEffect(()=>{const change=()=>{const current=navigation.find(item=>item.id===location.hash.slice(1));if(current)setPage(current.id);};addEventListener('hashchange',change);return()=>removeEventListener('hashchange',change);},[]);
-  useEffect(()=>{document.title=`${navigation.find(item=>item.id===page)?.title} · MeterWise`;window.scrollTo(0,0);},[page]);
+  useEffect(()=>{document.title=`${navigation.find(item=>item.id===page)?.title} · MeterWise`;window.scrollTo(0,0);document.querySelector('.estate-app h1')?.focus({preventScroll:true});},[page]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),6000);return()=>clearTimeout(timer);},[notice]);
   // Start the chart bundle while the estate request is still in flight.
   useEffect(()=>{void import('./EstateChart').catch(()=>{});},[]);
   useEffect(()=>{
     if(data)return;
-    const timer=setInterval(()=>setElapsed(performance.now()/1000),100);
-    setElapsed(performance.now()/1000);
+    const timer=setInterval(()=>setElapsed((performance.now()-startedAt.current)/1000),1000);
+    setElapsed((performance.now()-startedAt.current)/1000);
     return()=>clearInterval(timer);
   },[data]);
-  useEffect(()=>{
-    if(!role||data||error)return;
-    const timer=setInterval(()=>setLoadCreep(value=>Math.min(value+1,24)),250);
-    return()=>clearInterval(timer);
-  },[role,data,error]);
   useEffect(()=>{
     let active=true;
     (async()=>{
       try{
-        let current;
-        try{current=await estateApi('/session?view=estate');}catch(error){if(!(error instanceof RequestError)||error.status!==401)throw error;current=await estateApi('/session?view=estate',postEstate({role:'manager'}));}
-        if(active)setRole(current.role);
-        try{const me=await estateApi('/auth/me');if(active)setAuthInfo(me);}catch{}
+        const current=await bootstrapEstate();
+        if(active){
+          bootData.current=current.overview;
+          setAuthInfo(current.authInfo);
+          setRole(current.role);
+        }
       }catch(error){if(active){setError(error.message);setBusy(false);}}
     })();
     return()=>{active=false;};
   },[]);
   const refresh=useCallback(async()=>{
-    if(!role)return;const request=++counter.current;setBusy(true);setError('');setAnomaliesLoading(true);
+    if(!role)return;const request=++counter.current;setBusy(true);setError('');setAnomalies([]);setAnomaliesLoading(true);
     const query=new URLSearchParams({town,block});
     if(period==='custom'){query.set('from',from);query.set('to',to);}else if(bounds.current){query.set('to',bounds.current.to);query.set('from',addDays(bounds.current.to,1-Number(period)));}
     try{
       // Load the dashboard first. The ML pass then reuses the workspace the
       // overview created, instead of racing it and seeding the same readings twice.
-      const current=await estateApi(`/estate/overview?${query}`);
+      const initial=bootData.current;
+      bootData.current=null;
+      const current=initial??await estateApi(`/estate/overview?${query}`);
       if(request!==counter.current)return;
       bounds.current=current.bounds;
       setData(current);
       setLoadedKey([role,town,block,period,from,to].join('|'));
       setBusy(false);
       fetchMLAnomalies(town,block)
-        .then(anomRes=>{if(request===counter.current){setAnomalies(anomRes.anomalies);setAnomaliesDegraded(!!anomRes.degraded);setAnomalyReason(anomRes.degradedReason||'');setAnomaliesLoading(false);}})
+        .then(anomRes=>{if(request===counter.current){setAnomalies(anomRes.anomalies.filter(item=>current.blocks.some(block=>block.id===item.block_id)).map(item=>{const registered=current.catalogue.find(block=>block.id===item.block_id);return {...item,town:registered.town,block_label:`Blk ${registered.block} ${registered.street}`};}));setAnomaliesDegraded(!!anomRes.degraded);setAnomalyReason(anomRes.degradedReason||'');setAnomaliesLoading(false);}})
         .catch(()=>{if(request===counter.current){setAnomaliesDegraded(true);setAnomalyReason('Live ML service could not be reached.');setAnomaliesLoading(false);}});
     }
     catch(error){if(request===counter.current){setError(error.message);setAnomaliesLoading(false);}}
@@ -113,14 +109,8 @@ export default function EstateApp(){
   const ready=!!data&&!busy&&!error&&loadedKey===filterKey;
   const summary=useRef(null);summary.current=ready?data:null;
   const slow=!data&&elapsed>8;
-  const progress=ready?100:data?86:role?Math.min(70,46+loadCreep):12;
-  const stage=slow?'Generating your first-visit readings…':!role?'Connecting to your workspace…':!data?'Generating and loading estate readings…':'Preparing charts and work orders…';
-  const detail=slow?'Still generating your one-time demo dataset. The workspace is saved, so the next visit will skip this step.':!role?'Starting an isolated demo workspace for this browser.':!data?'Generating 14 days of synthetic meter readings, then calculating the estate energy balance.':'Drawing charts and assembling your dashboard.';
-  const bootSteps=[
-    {label:'Connect workspace',state:role?'done':'active'},
-    {label:'Load estate data',state:data?'done':role?'active':'pending'},
-    {label:'Render dashboard',state:ready?'done':data?'active':'pending'},
-  ];
+  const stage=slow?'Preparing your first-visit readings…':'Loading your estate workspace…';
+  const detail=slow?'The first visit prepares your private demo dataset. Your dashboard will open as soon as it is ready.':'Connecting securely and loading your estate summary.';
   useEffect(()=>{
     const context=document.modelContext;
     if(!context?.registerTool)return;const lifecycle=new AbortController();
@@ -131,235 +121,69 @@ export default function EstateApp(){
     if(!navOpen)return;const old=document.body.style.overflow;document.body.style.overflow='hidden';
     const controls=()=>Array.from(rail.current?.querySelectorAll('a[href],button:not([disabled])')??[]);controls()[0]?.focus();
     const key=(event)=>{if(event.key==='Escape')setNavOpen(false);if(event.key==='Tab'){const all=controls(),first=all[0],last=all.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}};
-    const resize=()=>{if(innerWidth>780)setNavOpen(false);};addEventListener('keydown',key);addEventListener('resize',resize);
+    const resize=()=>{if(innerWidth>900)setNavOpen(false);};addEventListener('keydown',key);addEventListener('resize',resize);
     return()=>{document.body.style.overflow=old;removeEventListener('keydown',key);removeEventListener('resize',resize);navTrigger.current?.focus();};
   },[navOpen]);
   async function switchRole(){
     if(busy)return;setBusy(true);++counter.current;
-    try{const current=await estateApi('/session?view=estate',postEstate({role:role==='manager'?'tenant':'manager'}));setTown('all');setBlock('all');setData(null);setRole(current.role);if(page==='estate-imports')navigate('estate');notify(current.role==='tenant'?'Read-only area view: Ang Mo Kio.':'Estate manager demo view restored.');}
+    try{const current=await estateApi('/session?view=estate',postEstate({role:canManage?'tenant':'manager'}));setTown('all');setBlock('all');setData(null);setRole(current.role);if(page==='estate-imports')navigate('estate');notify(current.role==='tenant'?'Read-only area view: Ang Mo Kio.':'Estate manager demo view restored.');}
     catch(error){setError(error.message);setBusy(false);}
   }
   async function openOrder(order){try{setSelected(await estateApi(`/estate/orders/${encodeURIComponent(order.id)}`));}catch(error){notify(error.message);}}
-  if(!data)return <BootScreen progress={progress} stage={stage} detail={detail} elapsed={elapsed} steps={bootSteps} error={error} onRetry={()=>location.reload()}/>;
+  if(!data)return <BootScreen stage={stage} detail={detail} elapsed={elapsed} error={error} onRetry={()=>location.reload()}/>;
   const current=navigation.find(item=>item.id===page),reportQuery=new URLSearchParams({from:data.from,to:data.to,town,block});
   return <div className="app-shell estate-app">{busy&&<div className="refresh-rail" role="progressbar" aria-label="Updating estate data"><span/></div>}<a className="skip-link" href="#main-content">Skip to estate data</a>
     {navOpen&&<button className="nav-overlay" aria-label="Close navigation" onClick={()=>setNavOpen(false)}/>}
     <aside ref={rail} id="estate-navigation" className={`sidebar ${navOpen?'is-open':''}`} role={navOpen?'dialog':undefined} aria-modal={navOpen||undefined} aria-label="Estate navigation">
       <button className="icon-button nav-close" aria-label="Close menu" onClick={()=>setNavOpen(false)}><X size={20}/></button>
       <a href="#estate" className="brand" onClick={()=>navigate('estate')}><span className="brand-mark"><Zap size={21} fill="currentColor"/></span>MeterWise</a>
-      <div className="workspace-label">SINGAPORE ESTATES</div><div className="workspace"><span className="workspace-icon"><Building2 size={19}/></span><div><strong>Common services</strong><span>Public housing energy pilot</span></div></div>
-      <nav aria-label="Estate main navigation">{navigation.filter(item=>role==='manager'||item.id!=='estate-imports').map(item=><button key={item.id} className={`nav-item ${page===item.id?'active':''}`} onClick={()=>navigate(item.id)} aria-current={page===item.id?'page':undefined}><item.icon size={19}/><span>{item.label}</span>{item.id==='estate-orders'&&data.metrics.openOrders>0&&<span className="nav-count">{data.metrics.openOrders}</span>}{item.id==='estate-forecast'&&!anomaliesLoading&&anomalies.length>0&&<span className="nav-count ml-alert-count" title={anomaliesDegraded?`${anomalies.length} demonstration anomalies (live ML unavailable)`:`${anomalies.length} anomalies detected`}>{anomalies.length}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="demo-card"><Leaf size={20}/><strong>Better data. Better estates.</strong><p>Independent pilot inspired by HDB’s Green Towns Programme.</p><a href="#overview">Open the building demo <ArrowUpRight size={14}/></a></div><div className="profile"><span className="avatar">{role==='manager'?'EM':'AV'}</span><div><strong>{role==='manager'?'Estate manager':'Area viewer'}</strong><span>{role==='manager'?'Demo operations workspace':'Ang Mo Kio · read only'}</span></div></div></div>
+      <div className="workspace-label">YOUR WORKSPACE</div><div className="workspace"><span className="workspace-icon"><Building2 size={19}/></span><div><strong>Singapore estates</strong><span>Common-area energy</span></div></div>
+      <nav aria-label="Estate main navigation">{navigation.filter(item=>canManage||item.id!=='estate-imports').map(item=><button key={item.id} className={`nav-item ${page===item.id?'active':''}`} onClick={()=>navigate(item.id)} aria-current={page===item.id?'page':undefined}><item.icon size={19}/><span>{item.label}</span>{item.id==='estate-orders'&&data.metrics.openOrders>0&&<span className="nav-count">{data.metrics.openOrders}</span>}{item.id==='estate-forecast'&&!anomaliesLoading&&anomalies.length>0&&<span className="nav-count ml-alert-count" title={anomaliesDegraded?`${anomalies.length} demonstration anomalies (live ML unavailable)`:`${anomalies.length} anomalies detected`}>{anomalies.length}</span>}</button>)}</nav>
+      <div className="sidebar-bottom"><div className="demo-card"><Leaf size={20}/><strong>Small insights. Better estates.</strong><p>Real building inventory. Simulated energy. A workspace to explore.</p><a href="#overview">Open the building demo <ArrowUpRight size={14}/></a></div><div className="profile"><span className="avatar">{canManage?'EM':'AV'}</span><div><strong>{canManage?'Estate manager':'Area viewer'}</strong><span>{canManage?'Demo operations workspace':'Ang Mo Kio · read only'}</span></div></div></div>
     </aside>
     <main className="main" id="main-content" aria-busy={busy} inert={navOpen||undefined}>
-      <header className="topbar"><div className="breadcrumb"><button ref={navTrigger} className="icon-button mobile-menu" aria-label="Open navigation" aria-controls="estate-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/></button><span>Estate operations</span><span className="breadcrumb-divider">/</span><strong>{current.label}</strong></div><div className="top-actions">{!authInfo?.isDemo&&authInfo?.orgName?<Pill tone="green">{authInfo.orgName}</Pill>:<Pill tone="demo">Independent pilot</Pill>}<button className="role-button" onClick={()=>setAuthOpen(true)}><Building2 size={16}/><span>{authInfo?.orgName?authInfo.orgName:'Client Sign In'}</span></button><button className="role-button" disabled={busy} onClick={()=>void switchRole()}><Eye size={16}/><span>{role==='manager'?'Preview area viewer':'Back to manager'}</span></button></div></header>
+      <header className="topbar"><div className="breadcrumb"><button ref={navTrigger} className="icon-button mobile-menu" aria-label="Open navigation" aria-controls="estate-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/></button><span>Estate operations</span><span className="breadcrumb-divider">/</span><strong>{current.label}</strong></div><div className="top-actions"><button className="role-button guide-toggle" aria-label="Quick guide" aria-expanded={guideOpen} onClick={()=>setGuideOpen(value=>!value)}><Compass size={16}/><span>Quick guide</span></button>{!authInfo?.isDemo&&authInfo?.orgName?<Pill tone="green">{authInfo.orgName}</Pill>:<Pill tone="demo">Independent pilot</Pill>}<button className="role-button" aria-label="Client sign in" onClick={()=>setAuthOpen(true)}><Building2 size={16}/><span>{authInfo?.orgName?authInfo.orgName:'Client Sign In'}</span></button><button className="role-button" aria-label={canManage?'Preview area viewer':'Back to manager'} disabled={busy} onClick={()=>void switchRole()}><Eye size={16}/><span>{canManage?'Preview area viewer':'Back to manager'}</span></button></div></header>
       <div className="page-content">
+
+        <div className="page-heading"><div><div className="eyebrow">ESTATE INTELLIGENCE</div><h1 tabIndex={-1}>{current.title}</h1><p>{page==='estate'?'A clear picture of your energy. A better place to start.':page==='estate-forecast'?'Hourly demand and rooftop solar ML forecasting with 95% confidence intervals and model accuracy metrics.':page==='estate-blocks'?'Compare registered blocks and inspect their simulated common-service assets.':page==='estate-imports'?'Restore missing intervals without hiding duplicates or invalid rows.':page==='estate-orders'?'Assign an inspection, record evidence, and verify the outcome.':page==='estate-reports'?'Export traceable block summaries and explore a lighting scenario.':'Public data, operational assumptions and calculation boundaries.'}</p></div><div className="heading-actions"><button className="icon-button bordered" aria-label="Refresh estate data" disabled={busy} onClick={()=>void refresh()}><RefreshCw size={18} className={busy?'spin':''}/></button>{page!=='estate-sources'&&<a aria-label="Export report" className={`button secondary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/><span>Export report</span></a>}</div></div>
         <div className="estate-provenance"><span><ShieldCheck size={16}/><strong>Real HDB inventory</strong><span className="provenance-divider">/</span> Simulated meters & maintenance</span><button className="text-button" onClick={()=>navigate('estate-sources')}>About this pilot <ArrowUpRight size={14}/></button></div>
-        <div className="page-heading"><div><div className="eyebrow">SINGAPORE · COMMON-AREA ENERGY</div><h1>{current.title}</h1><p>{page==='estate'?'See where energy goes. Prioritise what needs attention.':page==='estate-forecast'?'Hourly demand and rooftop solar ML forecasting with 95% confidence intervals and model accuracy metrics.':page==='estate-blocks'?'Compare registered blocks and inspect their simulated common-service assets.':page==='estate-imports'?'Restore missing intervals without hiding duplicates or invalid rows.':page==='estate-orders'?'Assign an inspection, record evidence, and verify the outcome.':page==='estate-reports'?'Export traceable block summaries and explore a lighting scenario.':'Public data, operational assumptions and calculation boundaries.'}</p></div><div className="heading-actions"><button className="icon-button bordered" aria-label="Refresh estate data" disabled={busy} onClick={()=>void refresh()}><RefreshCw size={18} className={busy?'spin':''}/></button>{page!=='estate-sources'&&<a className={`button secondary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/><span>Export report</span></a>}</div></div>
-        {page!=='estate-sources'&&<div className="estate-filters"><label>Reporting period<select aria-label="Estate reporting period" value={period} onChange={event=>{const value=event.target.value;if(value==='custom'){setFrom(data.from);setTo(data.to);}setPeriod(value);}}><option value="7">Last 7 days</option><option value="14">Full 14-day dataset</option><option value="custom">Custom range</option></select></label>{period==='custom'&&<><label>From<input type="date" aria-label="Estate from date" min={data.bounds.from} max={data.bounds.to} value={from} onChange={event=>setFrom(event.target.value)}/></label><label>To<input type="date" aria-label="Estate to date" min={data.bounds.from} max={data.bounds.to} value={to} onChange={event=>setTo(event.target.value)}/></label></>}<span className="estate-period">{date(data.from)} – {date(data.to)}<small>Hourly intervals · SGT</small></span><label>Town<select aria-label="Estate town" value={town} onChange={event=>{setTown(event.target.value);setBlock('all');}}><option value="all">All permitted towns</option>{[...new Set(data.catalogue.map(item=>item.town))].map(name=><option key={name}>{name}</option>)}</select></label><label>Block<select aria-label="Estate block" value={block} onChange={event=>setBlock(event.target.value)}><option value="all">All blocks</option>{data.catalogue.filter(item=>town==='all'||item.town===town).map(item=><option key={item.id} value={item.id}>Blk {item.block} · {item.street}</option>)}</select></label></div>}
+        {guideOpen&&<section className="workspace-guide" aria-label="How to use MeterWise"><div className="guide-heading"><div><Compass size={19}/><h2>Your estate, in three steps</h2></div><button className="icon-button" aria-label="Close quick guide" onClick={()=>setGuideOpen(false)}><X size={18}/></button></div><div className="guide-steps">{[{id:'estate',title:'Understand your energy',text:'Choose a town and period. Compare demand, solar and coverage.'},{id:'estate-imports',title:'Check the evidence',text:'Review missing readings before relying on grid and cost totals.'},{id:'estate-orders',title:'Take the next step',text:'Create an inspection, assign a team and track the outcome.'}].filter(item=>canManage||item.id!=='estate-imports').map((item,index)=><button key={item.id} onClick={()=>{navigate(item.id);setGuideOpen(false);}}><span>{String(index+1).padStart(2,'0')}</span><div><strong>{item.title}</strong><p>{item.text}</p></div><ArrowUpRight size={17}/></button>)}</div></section>}
+
+        {page!=='estate-sources'&&<div className="estate-filters"><label>Reporting period<select aria-label="Estate reporting period" value={period} onChange={event=>{const value=event.target.value;if(value==='custom'){setFrom(data.from);setTo(data.to);}setPeriod(value);}}><option value="7">Last 7 days</option><option value="14">Full 14-day dataset</option><option value="custom">Custom range</option></select></label>{period==='custom'&&<><label>From<input type="date" aria-label="Estate from date" min={data.bounds.from} max={data.bounds.to} value={from} onChange={event=>setFrom(event.target.value)}/></label><label>To<input type="date" aria-label="Estate to date" min={data.bounds.from} max={data.bounds.to} value={to} onChange={event=>setTo(event.target.value)}/></label></>}<span className="estate-period">{date(data.from)} – {date(data.to)}<small>Hourly intervals · SGT</small></span><label>Town<select aria-label="Estate town" value={town} onChange={event=>{setTown(event.target.value);setBlock('all');}}><option value="all">All towns</option>{[...new Set(data.catalogue.map(item=>item.town))].map(name=><option key={name}>{name}</option>)}</select></label><label>Block<select aria-label="Estate block" value={block} onChange={event=>setBlock(event.target.value)}><option value="all">All blocks</option>{data.catalogue.filter(item=>town==='all'||item.town===town).map(item=><option key={item.id} value={item.id}>Blk {item.block} · {item.street}</option>)}</select></label></div>}
         {error&&<div className="estate-notice error" role="alert"><TriangleAlert size={19}/><span>{error} Displayed figures retain the last valid selection. Exports are disabled.</span></div>}
         {busy&&<div className="data-status" role="status"><LoaderCircle size={16} className="spin"/> Updating your selection…</div>}
-        {!data.metrics.complete&&page!=='estate-sources'&&<div className="estate-notice"><TriangleAlert size={20}/><div><strong>{data.metrics.expected-data.metrics.received} missing hourly readings</strong><span>Grid import, export, cost, carbon and comparisons are withheld until the selected data is complete.</span></div>{role==='manager'&&<button className="button secondary" onClick={()=>navigate('estate-imports')}>Repair data <ArrowRight size={16}/></button>}</div>}
-        {page==='estate'&&<EstateOverviewPage data={data} anomalies={anomalies} anomaliesLoading={anomaliesLoading} anomaliesDegraded={anomaliesDegraded} anomalyReason={anomalyReason} onBlocks={()=>navigate('estate-blocks')} onIssue={issue=>setNewIssue(issue)} onOrders={()=>navigate('estate-orders')} onForecast={()=>navigate('estate-forecast')} canWrite={role==='manager'&&ready}/>}
+        {!data.metrics.complete&&page!=='estate-sources'&&<div className="estate-notice"><TriangleAlert size={20}/><div><strong>{data.metrics.expected-data.metrics.received} missing hourly readings</strong><span>Grid import, export, cost, carbon and comparisons are withheld until the selected data is complete.</span></div>{canManage&&<button className="button secondary" onClick={()=>navigate('estate-imports')}>Repair data <ArrowRight size={16}/></button>}</div>}
+        {page==='estate'&&<EstateOverviewPage data={data} anomalies={anomalies} anomaliesLoading={anomaliesLoading} anomaliesDegraded={anomaliesDegraded} anomalyReason={anomalyReason} onBlocks={()=>navigate('estate-blocks')} onIssue={issue=>setNewIssue(issue)} onOrders={()=>navigate('estate-orders')} onForecast={()=>navigate('estate-forecast')} onQuality={()=>navigate('estate-imports')} canWrite={canManage&&ready}/>}
+        <Suspense fallback={<div className="data-status" role="status">Opening {current.label.toLowerCase()}…</div>}>
         {page==='estate-forecast'&&<Suspense fallback={<div className="data-status" role="status"><LoaderCircle size={18} className="spin"/> Loading ML forecast…</div>}><MLForecastView town={town} block={block} catalogue={data.catalogue} policy={data.policy}/></Suspense>}
-        {page==='estate-blocks'&&<BlocksPage data={data} onChoose={id=>{setBlock(id);navigate('estate');}} canWrite={role==='manager'&&ready} onRefresh={refresh}/>}
-        {page==='estate-imports'&&role==='manager'&&<EstateImports onSaved={async()=>{notify('Estate readings saved. Recalculating the selected period.');await refresh();}}/>}
-        {page==='estate-orders'&&<OrdersPage data={data} onNew={()=>setNewIssue('manual')} onOpen={order=>void openOrder(order)} canWrite={role==='manager'&&ready}/>}
-        {page==='estate-reports'&&<ReportsPage data={data} reportQuery={reportQuery.toString()} ready={ready} canWrite={role==='manager'&&ready} onRefresh={refresh}/>}
+        {page==='estate-blocks'&&<BlocksPage data={data} onChoose={id=>{setBlock(id);navigate('estate');}} canWrite={canManage&&ready} onRefresh={refresh}/>}
+        {page==='estate-imports'&&canManage&&<EstateImports onSaved={async()=>{notify('Estate readings saved. Recalculating the selected period.');await refresh();}}/>}
+        {page==='estate-orders'&&<OrdersPage data={data} onNew={()=>setNewIssue('manual')} onOpen={order=>void openOrder(order)} canWrite={canManage&&ready}/>}
+        {page==='estate-reports'&&<ReportsPage data={data} reportQuery={reportQuery.toString()} ready={ready} canWrite={canManage&&ready} onRefresh={refresh}/>}
         {page==='estate-sources'&&<SourcesPage data={data}/>}
+        </Suspense>
         <footer className="page-footer">Independent portfolio pilot · Not affiliated with HDB or any Town Council · Public building metadata; simulated operational data · SGT (UTC+8)</footer>
       </div>
     </main>
+    <nav className="mobile-dock" aria-label="Quick navigation" inert={navOpen||undefined}>{[{id:'estate',label:'Overview',icon:LayoutDashboard},{id:'estate-blocks',label:'Assets',icon:Building2},{id:'estate-orders',label:'Work orders',icon:ClipboardCheck}].map(item=><button key={item.id} aria-current={page===item.id?'page':undefined} onClick={()=>navigate(item.id)}><item.icon size={20}/><span>{item.label}</span></button>)}<button aria-label="More navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(true)}><Menu size={20}/><span>More</span></button></nav>
     {notice&&<div className="toast" role="status"><CheckCircle2 size={18}/>{notice}<button className="icon-button" aria-label="Dismiss notification" onClick={()=>setNotice('')}><X size={15}/></button></div>}
+    <Suspense fallback={<div className="toast" role="status">Opening inspection…</div>}>
     {newIssue&&<NewOrderDialog data={data} issue={newIssue} onClose={()=>setNewIssue(null)} onSaved={async()=>{setNewIssue(null);navigate('estate-orders');notify('Work order created with an initial audit entry.');await refresh();}}/>}
-    {selected&&<OrderDialog order={selected} teams={data?.teams} canWrite={role==='manager'} onClose={()=>setSelected(null)} onSaved={async()=>{const current=await estateApi(`/estate/orders/${encodeURIComponent(selected.id)}`);setSelected(current);notify('Work order updated and evidence recorded.');await refresh();}}/>}
-    <AuthModal open={authOpen} onClose={()=>setAuthOpen(false)} authInfo={authInfo} onAuthenticated={handleAuthenticated} onLogout={handleLogout}/>
+    {selected&&<OrderDialog order={selected} teams={data?.teams} canWrite={canManage} onClose={()=>setSelected(null)} onSaved={async()=>{const current=await estateApi(`/estate/orders/${encodeURIComponent(selected.id)}`);setSelected(current);notify('Work order updated and evidence recorded.');await refresh();}}/>}
+    </Suspense>
+    {authOpen&&<Suspense fallback={<div className="toast" role="status">Opening sign in…</div>}><AuthModal open={authOpen} onClose={()=>setAuthOpen(false)} authInfo={authInfo} onAuthenticated={handleAuthenticated} onLogout={handleLogout}/></Suspense>}
   </div>;
 }
 
-function EstateOverviewPage({data,anomalies,anomaliesLoading,anomaliesDegraded,anomalyReason,onBlocks,onIssue,onOrders,onForecast,canWrite}){
+function EstateOverviewPage({data,anomalies,anomaliesLoading,anomaliesDegraded,anomalyReason,onBlocks,onIssue,onOrders,onForecast,onQuality,canWrite}){
+  const [triageOpen,setTriageOpen]=useState(false);
   return <><div className="metrics estate-metrics"><div className="metric"><div className="metric-top">Recorded common load<span className="metric-icon"><Zap size={17}/></span></div><div className="metric-value">{number(data.metrics.load)}<span>kWh</span></div><div className="metric-foot">{data.metrics.change===null?'Comparison requires complete periods':`${data.metrics.change>0?'+':''}${data.metrics.change}% vs previous equal-length period`} · simulated</div></div><div className="metric"><div className="metric-top">Rooftop solar generation<span className="metric-icon"><Sun size={17}/></span></div><div className="metric-value">{number(data.metrics.solar)}<span>kWh</span></div><div className="metric-foot">Recorded generation · simulated PV assets</div></div><div className="metric"><div className="metric-top">Derived grid import<span className="metric-icon"><Activity size={17}/></span></div><div className={`metric-value ${data.metrics.grid===null?'awaiting-value':''}`}>{data.metrics.grid===null?'Awaiting data':number(data.metrics.grid)}{data.metrics.grid!==null&&<span>kWh</span>}</div><div className="metric-foot">Matched by block and hour · export counted separately</div></div><div className="metric"><div className="metric-top">Meter data coverage<span className="metric-icon"><ShieldCheck size={17}/></span></div><div className="metric-value">{number(data.metrics.coverage,2)}<span>%</span></div><div className="metric-foot">{number(data.metrics.received)} / {number(data.metrics.expected)} hourly intervals</div></div></div>
     <div className="estate-context"><span><Building2 size={17}/><strong>{data.blocks.length} blocks</strong> · {data.metrics.units} public-record dwelling units</span><span><ClipboardCheck size={17}/><strong>{data.metrics.openOrders} open work orders</strong>{data.metrics.overdueOrders>0&&` · ${data.metrics.overdueOrders} overdue`}</span><span><Leaf size={17}/>Grid CO₂ estimate <strong>{data.metrics.co2Kg===null?'Withheld':`${number(data.metrics.co2Kg)} kg`}</strong></span><button type="button" className="text-button" onClick={onForecast}><Sparkles size={15}/>Predictive ML forecast <ArrowUpRight size={13}/></button></div>
-    <MLAnomalyBanner anomalies={anomalies} loading={anomaliesLoading} degraded={anomaliesDegraded} degradedReason={anomalyReason} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onExploreForecast={onForecast} onViewAll={()=>{document.getElementById('ml-anomaly-section')?.scrollIntoView({behavior:'smooth'});}}/>
+    <div className="operations-strip" aria-label="Operational priorities"><div className="operations-strip-label"><Activity size={17}/><strong>At a glance</strong></div><button onClick={onOrders}><span className="status-dot"/><strong>{data.metrics.openOrders}</strong> open work orders <ArrowUpRight size={14}/></button>{canWrite&&<button onClick={onQuality}><span className={`status-dot ${data.metrics.complete?'':'amber'}`}/><strong>{data.metrics.expected-data.metrics.received}</strong> missing readings <ArrowUpRight size={14}/></button>}<button onClick={()=>{setTriageOpen(true);requestAnimationFrame(()=>document.getElementById('ml-anomaly-section')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));}}><Sparkles size={15}/>{anomaliesLoading?'Checking insights…':`${anomalies.length} ${anomaliesDegraded?'demo insights':'model insights'}`}<ArrowRight size={14}/></button></div>
     <div className="estate-grid"><Panel title="Energy balance over time" subtitle="Simulated common load and solar; grid use requires complete intervals." action={<Pill>kWh / day</Pill>}><div className="estate-chart-legend"><span><i className="load-dot"/>Common load</span><span><i className="solar-dot"/>Solar generation</span><span><i className="grid-dot"/>Grid import</span></div><div className="estate-chart" role="img" aria-label="Daily common load, solar generation and derived grid import. Exact values are in the chart data table."><Suspense fallback={<p role="status">Loading chart… Exact values are available in the data table below.</p>}><EstateChart data={data.chart}/></Suspense></div><details className="chart-data"><summary>View chart data</summary><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>SGT date</th><th>Load kWh</th><th>Solar kWh</th><th>Grid kWh</th></tr></thead><tbody>{data.chart.map(point=><tr key={point.date}><td>{point.date}</td><td>{point.load}</td><td>{point.solar}</td><td>{point.grid??'Withheld'}</td></tr>)}</tbody></table></div></details></Panel>
     <Panel title="Common services" subtitle="Recorded energy by service" className="estate-services">{data.services.filter(item=>item.service!=='solar').map((item,index)=><div className="estate-service" key={item.service}><span className={`service-mark service-${index}`}>{item.service==='pumps'?<Activity size={17}/>:<Zap size={17}/>}</span><div><strong>{serviceLabels[item.service]}</strong><div className="service-track"><span style={{width:`${Math.max(2,item.kwh/data.metrics.load*100)}%`}}/></div></div><strong>{number(item.kwh)}<small>kWh</small></strong></div>)}<div className="estate-service-foot"><Sun size={22}/><div><strong>{data.metrics.selfConsumed===null?'Solar split withheld':`${number(data.metrics.selfConsumed)} kWh solar used on site`}</strong><p>{data.metrics.exported===null?'Restore missing readings to split self-consumption and exports.':`${number(data.metrics.exported)} kWh exported in matching intervals. Export revenue is excluded.`}</p></div></div></Panel></div>
     <div className="estate-grid estate-bottom-grid"><Panel title="Blocks at a glance" subtitle="Compare common-service energy per dwelling unit" action={<button className="text-button" onClick={onBlocks}>All blocks <ArrowUpRight size={14}/></button>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block</th><th>Common load</th><th>kWh / unit</th><th>Coverage</th></tr></thead><tbody>{data.blocks.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.town} · {block.street}</small></td><td>{number(block.load)} kWh</td><td>{block.kwhPerUnit===null?'Withheld':number(block.kwhPerUnit,2)}</td><td><Pill tone={block.complete?'green':'amber'}>{block.coverage}%</Pill></td></tr>)}</tbody></table></div></Panel>
     <Panel title="Needs an inspection" subtitle="Rules identify exceptions; they do not diagnose faults." action={<Pill tone="amber">{data.issues.length}</Pill>}><div className="estate-issues">{data.issues.length?data.issues.slice(0,5).map(issue=><div className="estate-issue" key={issue.key}><span className={`alert-icon ${issue.priority==='high'?'high':'medium'}`}>{issue.kind==='missing'?<Activity size={17}/>:<TriangleAlert size={17}/>}</span><div><strong>{issue.title}</strong><small>{issue.meter_id} · {data.catalogue.find(block=>block.id===issue.block_id)?.town}</small></div>{canWrite&&<button className="text-button" aria-label={`Create work order for ${issue.meter_id} ${issue.kind}`} onClick={()=>onIssue(issue)}>Inspect <ChevronRight size={15}/></button>}</div>):<div className="estate-empty"><CheckCircle2 size={25}/><p>No exceptions in this selection.</p></div>}</div><div className="panel-note"><ClipboardCheck size={16}/><button className="text-button" onClick={onOrders}>Open the maintenance queue</button></div></Panel></div>
-    <div id="ml-anomaly-section"><MLAnomalyPanel anomalies={anomalies} loading={anomaliesLoading} degraded={anomaliesDegraded} degradedReason={anomalyReason} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders} policy={data.policy}/></div></>;
-}
+    <section id="ml-anomaly-section" className="insight-disclosure"><button className="insight-toggle" onClick={()=>setTriageOpen(value=>!value)} aria-expanded={triageOpen} aria-controls="estate-insight-details"><span className="insight-icon"><Sparkles size={20}/></span><span><strong>Go deeper with anomaly insights</strong><small>{anomaliesDegraded?'Demonstration cases · Live model unavailable':'Review model signals, evidence and suggested inspections'}</small></span><span className="badge demo">{anomaliesLoading?'Checking…':`${anomalies.length} insights`}</span><ChevronDown size={19} className={triageOpen?'is-expanded':''}/></button>{triageOpen&&<div id="estate-insight-details"><Suspense fallback={<div className="data-status" role="status">Loading insight details…</div>}><MLAnomalyPanel anomalies={anomalies} loading={anomaliesLoading} degraded={anomaliesDegraded} degradedReason={anomalyReason} canWrite={canWrite} onDispatchOrder={issue=>onIssue(issue)} onOpenOrders={onOrders} policy={data.policy}/></Suspense></div>}</section></>;
 
-function BlocksPage({data,onChoose,canWrite,onRefresh}){
-  const [search,setSearch]=useState('');
-  const [addBlockOpen,setAddBlockOpen]=useState(false);
-  const [addMeterOpen,setAddMeterOpen]=useState(false);
-  const shown=data.blocks.filter(block=>`${block.block} ${block.street} ${block.town}`.toLowerCase().includes(search.toLowerCase()));
-  return <><div className="estate-block-highlights"><div><Building2 size={24}/><strong>{data.blocks.length}</strong><span>Public HDB building records</span></div><div><Zap size={24}/><strong>{data.meters.length}</strong><span>Simulated service meters</span></div><div><Activity size={24}/><strong>{data.metrics.units}</strong><span>Dwelling units from public data</span></div></div><Panel title="Block register" subtitle="Building information comes from HDB Property Information. Equipment is simulated." action={<div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><label className="estate-search"><Search size={16}/><input aria-label="Search estate blocks" placeholder="Search block or street" value={search} onChange={event=>setSearch(event.target.value)}/></label>{canWrite&&<><button type="button" className="button primary" onClick={()=>setAddBlockOpen(true)}><Plus size={16}/><span>Add Block</span></button><button type="button" className="button secondary" onClick={()=>setAddMeterOpen(true)}><Plus size={16}/><span>Add Meter</span></button></>}</div>}><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Block & street</th><th>Town</th><th>Units / floors</th><th>Completed</th><th>Demo asset IDs</th><th>Action</th></tr></thead><tbody>{shown.map(block=><tr key={block.id}><td><strong>Blk {block.block}</strong><small className="table-sub">{block.street}</small></td><td>{block.town}</td><td>{block.units} / {block.floors}</td><td>{block.completed}</td><td>{data.meters.filter(meter=>meter.block_id===block.id).map(meter=><span className="estate-asset-id" key={meter.id}>{meter.id}</span>)}</td><td><button className="text-button" onClick={()=>onChoose(block.id)}>View block <ArrowUpRight size={14}/></button></td></tr>)}</tbody></table></div>{!shown.length&&<div className="estate-empty">No blocks match this search.</div>}</Panel><div className="estate-notice"><Info size={19}/><span>The public inventory does not describe these blocks’ actual installed solar systems, meter readings or maintenance conditions. All equipment and exceptions in this pilot are simulated.</span></div>
-    {addBlockOpen&&<AddBlockDialog onClose={()=>setAddBlockOpen(false)} onRefresh={onRefresh}/>}
-    {addMeterOpen&&<AddMeterDialog blocks={data.blocks} onClose={()=>setAddMeterOpen(false)} onRefresh={onRefresh}/>}
-  </>;
-}
-
-function AddBlockDialog({onClose,onRefresh}){
-  const [id,setId]=useState(''),[town,setTown]=useState('Ang Mo Kio'),[block,setBlock]=useState(''),[street,setStreet]=useState(''),[units,setUnits]=useState(100),[floors,setFloors]=useState(12),[completed,setCompleted]=useState(2021);
-  const [busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function submit(event){
-    event.preventDefault();
-    if(busy)return;
-    setBusy(true);setError('');
-    try{
-      await estateApi('/estate/blocks',postEstate({
-        id:id.trim().toUpperCase(),
-        town:town.trim(),
-        block:block.trim(),
-        street:street.trim().toUpperCase(),
-        units:Number(units),
-        floors:Number(floors),
-        completed:Number(completed)
-      }));
-      await onRefresh();
-      onClose();
-    }catch(err){setError(err.message);}
-    finally{setBusy(false);}
-  }
-  return <Dialog title="Add Registered Block" onClose={onClose}>
-    <form onSubmit={submit} className="estate-form">
-      <label>Block Identifier (e.g. B07)<input required minLength={2} maxLength={24} aria-label="Block Identifier" placeholder="B07" value={id} onChange={e=>setId(e.target.value)}/></label>
-      <label>Town<input required minLength={2} maxLength={60} aria-label="Town" placeholder="Ang Mo Kio" value={town} onChange={e=>setTown(e.target.value)}/></label>
-      <label>Block Number<input required minLength={1} maxLength={20} aria-label="Block Number" placeholder="412" value={block} onChange={e=>setBlock(e.target.value)}/></label>
-      <label>Street Name<input required minLength={3} maxLength={120} aria-label="Street Name" placeholder="ANG MO KIO AVE 10" value={street} onChange={e=>setStreet(e.target.value)}/></label>
-      <label>Dwelling Units<input type="number" min={1} max={2000} required aria-label="Dwelling Units" value={units} onChange={e=>setUnits(e.target.value)}/></label>
-      <label>Floors<input type="number" min={1} max={100} required aria-label="Floors" value={floors} onChange={e=>setFloors(e.target.value)}/></label>
-      <label>Year Completed<input type="number" min={1950} max={2035} required aria-label="Year Completed" value={completed} onChange={e=>setCompleted(e.target.value)}/></label>
-      {error&&<p role="alert" className="estate-form-error">{error}</p>}
-      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Block'}</button></div>
-    </form>
-  </Dialog>;
-}
-
-function AddMeterDialog({blocks,onClose,onRefresh}){
-  const defaultBlock = blocks[0]?.id || 'B01';
-  const [id,setId]=useState(''),[blockId,setBlockId]=useState(defaultBlock),[service,setService]=useState('lighting'),[name,setName]=useState(''),[thresholdKwh,setThresholdKwh]=useState(10),[readingMode,setReadingMode]=useState('interval_kwh'),[multiplier,setMultiplier]=useState(1.0);
-  const [busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function submit(event){
-    event.preventDefault();
-    if(busy)return;
-    setBusy(true);setError('');
-    try{
-      await estateApi('/estate/meters',postEstate({
-        id:id.trim().toUpperCase(),
-        blockId,
-        service,
-        name:name.trim()||serviceLabels[service]||service,
-        thresholdKwh:Number(thresholdKwh),
-        readingMode,
-        multiplier:Number(multiplier)
-      }));
-      await onRefresh();
-      onClose();
-    }catch(err){setError(err.message);}
-    finally{setBusy(false);}
-  }
-  return <Dialog title="Add Service Meter" onClose={onClose}>
-    <form onSubmit={submit} className="estate-form">
-      <label>Meter Identifier (e.g. B07-LIGHTING)<input required minLength={3} maxLength={40} aria-label="Meter Identifier" placeholder="B07-LIGHTING" value={id} onChange={e=>setId(e.target.value)}/></label>
-      <label>Registered Block<select aria-label="Registered Block" value={blockId} onChange={e=>setBlockId(e.target.value)}>{blocks.map(b=><option key={b.id} value={b.id}>Blk {b.block} · {b.street} ({b.id})</option>)}</select></label>
-      <label>Service Category<select aria-label="Service Category" value={service} onChange={e=>setService(e.target.value)}><option value="lighting">Common-area lighting</option><option value="lifts">Lifts</option><option value="pumps">Water pumps</option><option value="solar">Rooftop solar</option></select></label>
-      <label>Meter Name (optional)<input maxLength={80} aria-label="Meter Name" placeholder={serviceLabels[service]||'Common-area lighting'} value={name} onChange={e=>setName(e.target.value)}/></label>
-      <label>Threshold (kWh / interval)<input type="number" step="0.1" min="0.1" max="100000" required aria-label="Threshold kWh" value={thresholdKwh} onChange={e=>setThresholdKwh(e.target.value)}/></label>
-      <label>Reading Mode<select aria-label="Reading Mode" value={readingMode} onChange={e=>setReadingMode(e.target.value)}><option value="interval_kwh">Interval kWh (completed hourly interval)</option><option value="cumulative_register">Cumulative Register</option></select></label>
-      <label>Multiplier<input type="number" step="0.001" min="0.001" max="10000" required aria-label="Multiplier" value={multiplier} onChange={e=>setMultiplier(e.target.value)}/></label>
-      {error&&<p role="alert" className="estate-form-error">{error}</p>}
-      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Meter'}</button></div>
-    </form>
-  </Dialog>;
-}
-
-function EstateImports({onSaved}){
-  const [file,setFile]=useState(null),[csv,setCsv]=useState(''),[preview,setPreview]=useState(null),[history,setHistory]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  const input=useRef(null),selection=useRef(0);
-  const loadHistory=useCallback(async()=>setHistory(await estateApi('/estate/imports')),[]);
-  useEffect(()=>{void loadHistory().catch(error=>setError(error.message));},[loadHistory]);
-  async function choose(candidate){const request=++selection.current;setFile(null);setCsv('');setPreview(null);setError('');if(!candidate)return;if(!candidate.name.toLowerCase().endsWith('.csv')||candidate.size>1_000_000){setError('Choose a .csv file smaller than 1 MB.');return;}setBusy(true);try{const text=await candidate.text();const result=await estateApi('/estate/imports/preview',postEstate({csv:text}));if(request===selection.current){setFile(candidate);setCsv(text);setPreview(result);}}catch(error){if(request===selection.current)setError(error.message);}finally{if(request===selection.current)setBusy(false);}}
-  async function commit(){if(!file||!preview?.valid||busy)return;setBusy(true);setError('');try{await estateApi('/estate/imports/commit',postEstate({csv,fileName:file.name}));setFile(null);setCsv('');setPreview(null);if(input.current)input.current.value='';await loadHistory();await onSaved();}catch(error){setError(error.message);}finally{setBusy(false);}}
-  return <><div className="estate-grid estate-import-grid"><Panel title="Validate an estate CSV" subtitle="Registered service meters · hourly interval consumption"><div className="estate-upload"><UploadCloud size={32}/><h3>Start with the gap-repair sample</h3><p>The sample restores two missing intervals. Preview first, then import only valid new readings.</p><input ref={input} type="file" accept=".csv,text/csv" aria-label="Choose estate CSV" disabled={busy} onChange={event=>void choose(event.target.files?.[0])}/><a className="text-button" href="/api/estate/sample.csv"><Download size={16}/>Download estate sample CSV</a></div>{error&&<div className="estate-form-error" role="alert">{error}</div>}{busy&&<div className="data-status" role="status"><LoaderCircle className="spin" size={16}/> Validating or saving…</div>}{preview&&<div className="estate-preview"><strong>{file?.name}</strong><div className="preview-stats"><div><strong>{preview.valid}</strong><span>Valid new readings</span></div><div><strong>{preview.duplicate}</strong><span>Duplicates</span></div><div><strong>{preview.invalid}</strong><span>Invalid rows</span></div></div>{preview.issues.length>0&&<div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Line</th><th>Meter</th><th>Validation result</th></tr></thead><tbody>{preview.issues.slice(0,50).map((issue,index)=><tr key={index}><td>{issue.line}</td><td>{issue.meter}</td><td>{issue.message}</td></tr>)}</tbody></table></div>}<button className="button primary" disabled={busy||!preview.valid} onClick={()=>void commit()}>Import {preview.valid} estate readings <ArrowRight size={16}/></button></div>}</Panel><Panel title="Meter reading contract" subtitle="A completed interval, never a cumulative register"><div className="estate-contract"><code>meter_id,timestamp,consumption_kwh<br/>B01-LIGHTING,2026-10-01T10:00:00+08:00,1.67</code><ul><li>Lighting, lifts, pumps or solar meter IDs from the block register.</li><li>ISO timestamp with timezone; aligned to a completed hour.</li><li>Zero is valid. Negative, future and unknown-meter readings are rejected.</li><li>Only the 14-day demonstration period is accepted.</li><li>1 MB and 1,500 rows per file. Duplicate intervals stay unchanged.</li></ul><p>Use synthetic data only. This public demo has no actual agency or resident accounts.</p></div></Panel></div><Panel title="Saved import history" subtitle="Persistent in your browser’s Turso workspace"><div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>File</th><th>Imported</th><th>Duplicates</th><th>Invalid</th><th>Saved at (SGT)</th></tr></thead><tbody>{history.map(record=><tr key={record.id}><td>{record.file_name}</td><td><Pill tone="green">{record.accepted}</Pill></td><td>{record.skipped}</td><td>{record.rejected}</td><td>{stamp(record.created_at)}</td></tr>)}</tbody></table></div>{!history.length&&<div className="estate-empty">Your first validated import will appear here.</div>}</Panel></>;
-}
-
-function OrdersPage({data,onNew,onOpen,canWrite}){
-  const [status,setStatus]=useState('all');const orders=data.orders.filter(order=>status==='all'||order.status===status);
-  return <><div className="estate-workflow">{['open','in_progress','completed','verified'].map((status,index)=><div key={status}><span>{index+1}</span><strong>{statusLabel[status]}</strong><small>{index===0?'Triage & prioritise':index===1?'Assign a demo team':index===2?'Record completion evidence':'Review and verify'}</small></div>)}</div><Panel title="Maintenance queue" subtitle="Demo response targets: high priority 24 h; other priorities 72 h. No messages are sent." action={canWrite&&<button className="button primary" onClick={onNew}><Plus size={16}/>New work order</button>}><div className="estate-status-filters">{['all','open','in_progress','completed','verified'].map(value=><button key={value} className={status===value?'selected':''} aria-pressed={status===value} onClick={()=>setStatus(value)}>{value==='all'?'All orders':statusLabel[value]} <span>{data.orders.filter(order=>value==='all'||order.status===value).length}</span></button>)}</div>{orders.length?<div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable estate data table"><table><thead><tr><th>Work order</th><th>Asset</th><th>Priority</th><th>Status</th><th>Assigned demo team</th><th>Due (SGT)</th><th>Action</th></tr></thead><tbody>{orders.map(order=><tr key={order.id}><td><strong>{order.title}</strong><small className="table-sub">WO-{order.id.split('|').at(-1).slice(0,8)}</small></td><td>{order.meter_id}</td><td><Pill tone={order.priority==='high'?'red':'amber'}>{order.priority}</Pill></td><td><Pill tone={order.status==='verified'?'green':'blue'}>{statusLabel[order.status]}</Pill></td><td>{order.assignee||'Unassigned'}</td><td>{stamp(order.due_at)}</td><td><button className="text-button" onClick={()=>onOpen(order)} aria-label={`Review work order ${order.title}`}>Review <ChevronRight size={15}/></button></td></tr>)}</tbody></table></div>:<div className="estate-empty"><ClipboardCheck size={29}/><h3>No work orders in this status</h3><p>Create an inspection from a dashboard exception or add an order here.</p></div>}<div className="panel-note"><ShieldCheck size={16}/><span>Transitions require evidence. Version checks prevent stale updates from overwriting a newer change. Audit events are append-only through the application.</span></div></Panel></>;
-}
-
-function NewOrderDialog({data,issue,onClose,onSaved}){
-  const isML = issue !== 'manual' && 'anomaly_type' in issue;
-  const defaultMeter = issue === 'manual' ? data.meters[0].id : issue.meter_id;
-  const defaultTitle = issue === 'manual' ? '' : isML ? issue.work_order_title : issue.title;
-  const defaultPriority = issue === 'manual' ? 'medium' : isML ? issue.suggested_priority : issue.priority;
-  const defaultNote = issue === 'manual' ? '' : isML ? issue.work_order_note : `Triage of simulated exception: ${issue.detail}`;
-
-  const [meterId,setMeterId]=useState(defaultMeter),[title,setTitle]=useState(defaultTitle),[priority,setPriority]=useState(defaultPriority),[note,setNote]=useState(defaultNote),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function submit(event){event.preventDefault();if(busy)return;setBusy(true);setError('');try{await estateApi('/estate/orders',postEstate({meterId,title,priority,note}));await onSaved();}catch(error){setError(error.message);}finally{setBusy(false);}}
-  return <Dialog title={isML ? `Dispatch inspection: ${issue.meter_id}` : "Create inspection work order"} onClose={onClose}><form onSubmit={submit} className="estate-form"><label>Registered demo asset<select aria-label="Work order asset" value={meterId} onChange={event=>setMeterId(event.target.value)}>{data.meters.map(meter=><option value={meter.id} key={meter.id}>{meter.id} · {meter.location}</option>)}</select></label><label>Title<input aria-label="Work order title" minLength={5} maxLength={160} required value={title} onChange={event=>setTitle(event.target.value)}/></label><label>Priority<select aria-label="Work order priority" value={priority} onChange={event=>setPriority(event.target.value)}><option value="high">High · 24-hour demo target</option><option value="medium">Medium · 72-hour demo target</option><option value="low">Low · 72-hour demo target</option></select></label><label>Initial inspection context<textarea aria-label="Initial inspection context" minLength={12} maxLength={1200} required rows={4} value={note} onChange={event=>setNote(event.target.value)}/></label><p className="field-hint">{isML ? 'Pre-filled with diagnostic evidence from the Isolation Forest anomaly detector. Creates an audited inspection work order.' : 'Only simulated inspection details. Creating an order records an audit event; it does not dispatch a real contractor.'}</p>{error&&<p role="alert" className="estate-form-error">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={busy}>{busy?'Saving…':'Create work order'}</button></div></form></Dialog>;
-}
-
-function OrderDialog({order,teams,canWrite,onClose,onSaved}){
-  const defaultTeams=['Electrical maintenance team (demo)','Lift maintenance team (demo)','Pump maintenance team (demo)','Estate review team (demo)'];
-  const teamList=(teams&&teams.length>0)?teams.map(t=>typeof t==='string'?t:(t.name.includes('(demo)')?t.name:`${t.name} (demo)`)):defaultTeams;
-  if(order.assignee&&!teamList.includes(order.assignee))teamList.unshift(order.assignee);
-  const [status,setStatus]=useState(nextStatus[order.status][0]),[assignee,setAssignee]=useState(order.assignee||teamList[0]),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useEffect(()=>{setStatus(nextStatus[order.status][0]);setNote('');},[order.version,order.status]);
-  async function submit(event){event.preventDefault();if(busy)return;setBusy(true);setError('');try{await estateApi(`/estate/orders/${encodeURIComponent(order.id)}`,{method:'PATCH',body:JSON.stringify({version:order.version,status,assignee,note})});await onSaved();}catch(error){setError(error.message);}finally{setBusy(false);}}
-  return <Dialog title={order.title} onClose={onClose}><div className="estate-order-summary"><Pill tone="blue">{statusLabel[order.status]}</Pill><span>{order.meter_id} · Version {order.version}</span><span>Due {stamp(order.due_at)} SGT</span></div>{canWrite&&<form className="estate-form" onSubmit={submit}><label>Next workflow step<select aria-label="Next work order status" value={status} onChange={event=>setStatus(event.target.value)}>{nextStatus[order.status].map(value=><option key={value} value={value}>{statusLabel[value]}</option>)}</select></label><label>Assigned demo team<select aria-label="Assigned demo team" value={assignee} onChange={event=>setAssignee(event.target.value)}>{teamList.map(name=><option key={name} value={name}>{name}</option>)}</select></label><label>Inspection / verification evidence<textarea aria-label="Work order evidence" minLength={12} maxLength={1200} required rows={3} value={note} onChange={event=>setNote(event.target.value)}/></label><p className="field-hint">Record what was checked and the simulated outcome. Verification requires a separate workflow step.</p>{error&&<p role="alert" className="estate-form-error">{error}</p>}<button className="button primary" disabled={busy}>{busy?'Saving…':'Save workflow step'}</button></form>}<div className="estate-audit"><h3>Evidence & audit timeline</h3>{order.events?.map(event=><div className="estate-audit-event" key={event.id}><span className="audit-dot"/><div><strong>{event.action.replaceAll('_',' ')}</strong><p>{event.body}</p><small>{event.actor} · {stamp(event.created_at)} SGT</small></div></div>)}</div></Dialog>;
-}
-
-function ReportsPage({data,reportQuery,ready,canWrite,onRefresh}){
-  const [reduction,setReduction]=useState(15),lighting=data.services.find(item=>item.service==='lighting')?.kwh??0,potential=lighting*reduction/100;
-  const [editPolicyOpen,setEditPolicyOpen]=useState(false);
-  const tariffDisplay = data.policy?.tariff !== undefined ? data.policy.tariff : 0.285;
-  const gridFactorDisplay = data.policy?.gridFactor !== undefined ? data.policy.gridFactor : 0.402;
-  const gridFactorYear = data.policy?.gridFactorYear ?? 2024;
-  return <><div className="report-card"><div className="report-cover"><span className="report-icon"><FileBarChart2 size={36}/></span><div><div className="eyebrow">ESTATE ENERGY BRIEF</div><h2>One report. A traceable source.</h2><p>{date(data.from)} – {date(data.to)}</p><span className="report-meta">{data.blocks.length} blocks · public inventory + simulated energy</span></div></div><div className="report-download"><h3>Download block summary</h3><p>Load, solar, separate grid imports/exports, coverage, public dwelling units and source metadata. Missing-data estimates remain blank.</p><a className={`button primary ${!ready?'disabled':''}`} aria-disabled={!ready} tabIndex={ready?0:-1} href={ready?`/api/estate/report.csv?${reportQuery}`:undefined}><Download size={17}/>Download estate CSV</a></div></div><div className="estate-grid"><Panel title="Lighting improvement scenario" subtitle="A what-if calculation; no intervention or savings is claimed."><div className="estate-scenario"><label htmlFor="lighting-reduction">Assumed lighting reduction <strong>{reduction}%</strong></label><input id="lighting-reduction" aria-label="Lighting reduction percentage" type="range" min={0} max={40} step={1} value={reduction} onChange={event=>setReduction(Number(event.target.value))}/><div className="scenario-range"><span>0%</span><span>40%</span></div><div className="scenario-result"><Leaf size={28}/><div><strong>{data.metrics.complete?`${number(potential,2)} kWh`:'Awaiting complete readings'}</strong><span>Potential common-load reduction in this reporting period</span></div></div><p>Calculation: recorded lighting consumption × assumed reduction. This estimates load reduction, not grid-bill savings; solar overlap, contracts, occupancy, capital costs and rebound effects are excluded.</p></div></Panel><Panel title="Reporting assumptions" subtitle="Keep operational decisions tied to their evidence." action={canWrite&&<button type="button" className="button secondary" onClick={()=>setEditPolicyOpen(true)}>Edit Tariff & Carbon Policy</button>}><dl className="estate-assumptions"><div><dt>Grid energy estimate</dt><dd>{data.metrics.grid===null?'Withheld':`${number(data.metrics.grid,2)} kWh`}</dd></div><div><dt>Estimated grid energy charge</dt><dd>{data.metrics.cost===null?'Withheld':money(data.metrics.cost)}</dd></div><div><dt>Configured illustrative tariff</dt><dd>S${tariffDisplay} / kWh · excludes GST, solar PPA, other charges and export revenue</dd></div><div><dt>Grid CO₂ estimate</dt><dd>{data.metrics.co2Kg===null?'Withheld':`${number(data.metrics.co2Kg,2)} kg CO₂`}</dd></div><div><dt>EMA historical grid factor</dt><dd>{gridFactorYear}: {gridFactorDisplay} kg CO₂ / kWh · not a 2026 factor or audited carbon report</dd></div></dl></Panel></div>
-    {editPolicyOpen&&<EditPolicyDialog policy={data.policy} onClose={()=>setEditPolicyOpen(false)} onRefresh={onRefresh}/>}
-  </>;
-}
-
-function EditPolicyDialog({policy,onClose,onRefresh}){
-  const [tariff,setTariff]=useState(policy?.tariff??0.285);
-  const [gridFactor,setGridFactor]=useState(policy?.gridFactor??0.402);
-  const [highPriorityHours,setHighPriorityHours]=useState(policy?.highPriorityHours??24);
-  const [otherPriorityHours,setOtherPriorityHours]=useState(policy?.otherPriorityHours??72);
-  const [busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function submit(event){
-    event.preventDefault();
-    if(busy)return;
-    setBusy(true);setError('');
-    try{
-      await estateApi('/estate/policy',{
-        method:'PATCH',
-        body:JSON.stringify({
-          tariff:Number(tariff),
-          gridFactor:Number(gridFactor),
-          highPriorityHours:Number(highPriorityHours),
-          otherPriorityHours:Number(otherPriorityHours)
-        })
-      });
-      await onRefresh();
-      onClose();
-    }catch(err){setError(err.message);}
-    finally{setBusy(false);}
-  }
-  return <Dialog title="Edit Tariff & Carbon Policy" onClose={onClose}>
-    <form onSubmit={submit} className="estate-form">
-      <label>Illustrative Grid Tariff (S$ / kWh)<input type="number" step="0.001" min="0.01" max="5.0" required aria-label="Illustrative Grid Tariff" value={tariff} onChange={e=>setTariff(e.target.value)}/></label>
-      <label>EMA Grid Emission Factor (kg CO₂ / kWh)<input type="number" step="0.001" min="0.0" max="5.0" required aria-label="EMA Grid Emission Factor" value={gridFactor} onChange={e=>setGridFactor(e.target.value)}/></label>
-      <label>High Priority SLA Target (hours)<input type="number" min={1} max={720} required aria-label="High Priority SLA Target" value={highPriorityHours} onChange={e=>setHighPriorityHours(e.target.value)}/></label>
-      <label>Normal Priority SLA Target (hours)<input type="number" min={1} max={720} required aria-label="Normal Priority SLA Target" value={otherPriorityHours} onChange={e=>setOtherPriorityHours(e.target.value)}/></label>
-      <p className="field-hint">Updates the workspace pricing, carbon calculations, and work order target response times.</p>
-      {error&&<p role="alert" className="estate-form-error">{error}</p>}
-      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy}>{busy?'Saving…':'Save Policy'}</button></div>
-    </form>
-  </Dialog>;
-}
-
-function SourcesPage({data}){
-  return <><div className="estate-source-intro"><BookOpen size={26}/><div><h2>A Singapore operations use case with honest provenance.</h2><p>This is an independent portfolio pilot inspired by public programmes. It is not an HDB, Town Council or government-operated service.</p></div></div><div className="estate-source-grid"><Panel title="HDB Property Information" subtitle="Public building inventory"><div className="estate-source-body"><Pill tone="green">Real public data</Pill><p>Six selected residential records: block number, street, town, floors, completion year and dwelling units. Inventory period ends December 2025.</p><p><strong>Retrieved:</strong> {date(data.source.retrieved_at)}<br/><strong>Publisher:</strong> Housing & Development Board<br/><strong>Licence:</strong> Singapore Open Data Licence</p><a href={data.source.source_url} target="_blank" rel="noopener noreferrer" className="text-button">View dataset and licence <ExternalLink size={15}/></a></div></Panel><Panel title="Green Towns & SolarNova" subtitle="Public policy context"><div className="estate-source-body"><Pill>Programme reference</Pill><p>HDB’s Green Towns Programme includes solar panels, smart lighting and smart electric sub-meters. SolarNova describes daytime solar use for lifts, lights and pumps, with excess supplied to the grid.</p><a href="https://www.hdb.gov.sg/about-us/our-role/create-smart-and-sustainable-homes/green-towns-programme" target="_blank" rel="noopener noreferrer" className="text-button">HDB Green Towns Programme <ExternalLink size={15}/></a><a href="https://www.hdb.gov.sg/hdb-pulse/news/2021/hdb-launches-sixth-solarnova-tender-with-smart-electrical-sub-meters-to-optimise-energy-use" target="_blank" rel="noopener noreferrer" className="text-button">SolarNova common services <ExternalLink size={15}/></a></div></Panel><Panel title="EMA grid emission factor" subtitle="A historical reference, explicitly dated"><div className="estate-source-body"><Pill>2024 reference</Pill><p>The Singapore Energy Statistics chapter reports a 2024 average grid emission factor of 0.402 kg CO₂/kWh. This pilot multiplies derived grid imports by that factor.</p><p>No carbon certification, lifecycle emissions calculation or current-year factor is claimed.</p><a href="https://www.ema.gov.sg/resources/singapore-energy-statistics/chapter2" target="_blank" rel="noopener noreferrer" className="text-button">View EMA source <ExternalLink size={15}/></a></div></Panel><Panel title="Meter & maintenance simulation" subtitle="Operational data is generated for demonstration"><div className="estate-source-body"><Pill tone="amber">Simulated data</Pill><p>Lighting, lift, pump and solar readings are synthetic. The register does not assert actual installed equipment, defects or energy performance at any real block.</p><p>The demo contains 14 complete historical days, two missing readings and configured threshold exceptions. Work orders, assigned teams and response targets are simulated.</p></div></Panel></div><Panel title="Calculation rules" subtitle="Designed to avoid plausible-looking but unsupported conclusions"><div className="estate-methods"><div><span>01</span><div><h3>Balance by block and hour</h3><p>Common load is lighting + lifts + pumps. Self-consumed solar = min(load, solar); grid import = max(load − solar, 0); export = max(solar − load, 0). Sum the intervals separately, never net different blocks or times together.</p></div></div><div><span>02</span><div><h3>Missing data remains missing</h3><p>Any missing meter interval withholds grid balance, cost, carbon, per-unit comparisons and baseline change for that selection. Recorded load and solar remain labelled as recorded values. Zero readings remain valid.</p></div></div><div><span>03</span><div><h3>Separate scale from performance</h3><p>Common-load kWh per dwelling uses public inventory units. It does not measure household consumption or bill residents. Comparisons require complete, equal-length periods.</p></div></div><div><span>04</span><div><h3>Trace changes through evidence</h3><p>Work orders move from open to in progress, completed, then verified. Every step stores a note and versioned update. Browser workspaces are isolated; the role switch is a demo of permissions, not real identity authentication.</p></div></div></div></Panel></>;
 }

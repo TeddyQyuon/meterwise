@@ -18,13 +18,14 @@
     <h1>MeterWise responsive browser QA</h1>
     <label>App viewport
       <select id="viewport-width">
-        <option value="390">390 px · phone layout</option>
+        <option value="320">320 px · small phone layout</option>
+        <option selected value="390">390 px · phone layout</option>
         <option value="768">768 px · tablet layout</option>
         <option value="1280">1280 px · desktop layout</option>
       </select>
     </label>
   </header>
-  <iframe id="meterwise-viewport" title="MeterWise app viewport" src="/#overview"></iframe>
+  <iframe id="meterwise-viewport" title="MeterWise app viewport" src="/#estate"></iframe>
   <p>This local-only harness checks responsive CSS and interaction at real iframe viewport widths. It does not emulate mobile hardware or touch input.</p>
   <script>
     document.querySelector('#viewport-width').addEventListener('change',event=>{
