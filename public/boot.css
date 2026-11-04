@@ -378,3 +378,8 @@
   }
   .mw-boot-track > span { transition: none; }
 }
+
+.mw-boot-track .mw-boot-indeterminate { width:35%; animation: mw-boot-loading 1.5s ease-in-out infinite; }
+.mw-boot-meta > span:first-child { flex:1; }
+@keyframes mw-boot-loading { from { transform: translateX(-110%); } to { transform: translateX(390%); } }
+@media(prefers-reduced-motion:reduce) { .mw-boot-track .mw-boot-indeterminate { animation:none; } }
