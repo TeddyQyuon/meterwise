@@ -62,7 +62,7 @@ export default function PortfolioDemoBadge() {
   };
 
   return (
-    <div style={styles.wrap} role="region" aria-label="Demo notice" data-demo-badge="portfolio">
+    <div className="portfolio-demo-notice" style={styles.wrap} role="region" aria-label="Demo notice" data-demo-badge="portfolio">
       <span style={styles.dot} aria-hidden="true" />
       <span style={styles.label}>Live demo</span>
       <a style={styles.link} href={PORTFOLIO_URL} target="_blank" rel="noopener noreferrer">

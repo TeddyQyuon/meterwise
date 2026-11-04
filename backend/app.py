@@ -15,7 +15,7 @@ from .auth import authenticate_api_key, authenticate_user, create_api_key, regis
 from .building import handle_building, session_info
 from .core import MAX_REQUEST_BYTES, VERSION, ApiError, iso, json_response, now, security_headers, sha256
 from .database import ROOT, get_database
-from .estate import ensure_estate, handle_estate
+from .estate import ensure_estate, handle_estate, overview
 from .seed import ensure_workspace, provision_workspace
 
 
@@ -134,7 +134,10 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
             token = secrets.token_hex(32)
             db.run("INSERT INTO sessions (token_hash,workspace_id,role,tenant_id,expires_at) VALUES (?,?,?,?,?)",
                    [sha256(token), workspace, role, access["tenant_id"], time + 604800000])
-            response = json_response({"role": role, "tenantId": access["tenant_id"]} if estate_view else session_info(db, access))
+            session_data = {"role": role, "tenantId": access["tenant_id"]} if estate_view else session_info(db, access)
+            if estate_view and request.query_params.get("bootstrap") == "1":
+                session_data.update(overview=overview(db, access, {}), authInfo={"isDemo": True, "role": role})
+            response = json_response(session_data)
             response.set_cookie("mw_session", token, max_age=604800, httponly=True, samesite="lax", secure=secure)
             if request.cookies.get("mw_workspace"):
                 response.delete_cookie("mw_workspace")
@@ -178,7 +181,13 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
         if path.startswith("/api/estate/"):
             return handle_estate(db, access, path, method, request.query_params, body)
         if path == "/api/session" and method == "GET" and request.query_params.get("view") == "estate":
-            return json_response({"role": access["role"], "tenantId": access["tenant_id"], "isDemo": access["is_demo"], "orgName": access.get("org_name")})
+            session_data = {"role": access["role"], "tenantId": access["tenant_id"], "isDemo": access["is_demo"], "orgName": access.get("org_name")}
+            if request.query_params.get("bootstrap") == "1":
+                session_data.update(overview=overview(db, access, {}), authInfo={
+                    "isDemo": access["is_demo"], "orgName": access.get("org_name"),
+                    "actorName": access.get("actor_name"), "role": access["role"],
+                })
+            return json_response(session_data)
         # Estate visitors only seed the separate building demo when they open it.
         ensure_workspace(db, workspace)
         return handle_building(db, access, path, method, request.query_params, body)
