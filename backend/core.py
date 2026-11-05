@@ -12,9 +12,10 @@ MAX_REQUEST_BYTES = 1_100_000
 
 
 class ApiError(Exception):
-    def __init__(self, status, message):
+    def __init__(self, status, message, retry_after=None):
         super().__init__(message)
         self.status = status
+        self.retry_after = retry_after
 
 
 def now():
