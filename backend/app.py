@@ -13,9 +13,10 @@ from starlette.staticfiles import StaticFiles
 
 from .auth import authenticate_api_key, authenticate_user, create_api_key, register_organization
 from .building import handle_building, session_info
-from .core import MAX_REQUEST_BYTES, VERSION, ApiError, iso, json_response, now, security_headers, sha256
+from .core import MAX_REQUEST_BYTES, VERSION, ApiError, json_response, now, security_headers, sha256
 from .database import ROOT, get_database
 from .estate import ensure_estate, handle_estate, overview
+from .rate_limit import protect_auth
 from .seed import ensure_workspace, provision_workspace
 
 
@@ -77,7 +78,10 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
 
     @api.exception_handler(ApiError)
     async def api_error(request, error):
-        return json_response({"error": str(error)}, error.status)
+        response = json_response({"error": str(error)}, error.status)
+        if error.retry_after is not None:
+            response.headers["Retry-After"] = str(error.retry_after)
+        return response
 
     def dispatch(request, body, visitor, existing_visitor):
         db = database if database is not None else get_database()
@@ -94,6 +98,7 @@ def create_app(database=None, workspace_limit=100, trusted_origins=()):
         secure = request.url.scheme == "https" or bool(os.getenv("VERCEL"))
         token = request.cookies.get("mw_session")
         if path in ("/api/auth/register", "/api/auth/login") and method == "POST":
+            protect_auth(db, request, body)
             auth_info = register_organization(db, body) if path.endswith("/register") else authenticate_user(db, body)
             ws = auth_info["workspaceId"]
             ensure_workspace(db, ws)

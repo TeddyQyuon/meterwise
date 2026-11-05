@@ -21,7 +21,8 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    if not isinstance(password, str) or not isinstance(stored_hash, str):
+    if (not isinstance(password, str) or not 8 <= len(password) <= 128
+            or not isinstance(stored_hash, str)):
         return False
     parts = stored_hash.split("$")
     if len(parts) != 4 or parts[0] != "pbkdf2_sha256":

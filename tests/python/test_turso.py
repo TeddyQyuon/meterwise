@@ -11,7 +11,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
+from backend.core import ApiError
 from backend.database import DatabaseError, TursoDatabase, decoded, encoded
+from backend.rate_limit import consume
 
 
 class HranaSQLite:
@@ -129,3 +131,14 @@ def test_http_rejects_incomplete_transaction_result():
     with pytest.raises(DatabaseError):
         db.batch([("SELECT 1", [])])
     db.close()
+
+
+def test_http_authentication_budget_is_atomic_and_shared(remote):
+    db, _ = remote
+    timestamp = 1_800_000_000
+    for _ in range(3):
+        consume(db, "test", "same-account", 3, 900, timestamp)
+    with pytest.raises(ApiError) as error:
+        consume(db, "test", "same-account", 3, 900, timestamp)
+    assert error.value.status == 429
+    assert error.value.retry_after == 900
