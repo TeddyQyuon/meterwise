@@ -28,3 +28,5 @@ CLAUDE.md
 *_UPGRADE.md
 build/
 .next/
+docs/qa/
+docs/security/
