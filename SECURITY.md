@@ -1,6 +1,6 @@
 # MeterWise security review — Python backend 2.1
 
-The Python migration preserves visitor isolation, workspace identity and saved data. `VERIFICATION.md` records the checks actually run. Dependency advisories and application regression tests cover different risks; a clean advisory report is not a claim that every vulnerability is eliminated.
+The Python migration preserves visitor isolation, workspace identity and saved data. Dependency advisories and application regression tests cover different risks; a clean advisory report is not a claim that every vulnerability is eliminated.
 
 ## Access and persistence
 
